@@ -1,0 +1,38 @@
+{
+  "name": "resolve-signal-ai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AI-powered customer feedback operations platform",
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@11.19.0",
+  "scripts": {
+    "build": "pnpm contracts:build && pnpm --filter @resolve-signal/api build && pnpm --filter @resolve-signal/web build",
+    "contracts:build": "pnpm --filter @resolve-signal/contracts build",
+    "dev": "pnpm contracts:build && concurrently -k -n api,web -c magenta,cyan \"pnpm --filter @resolve-signal/api dev\" \"pnpm --filter @resolve-signal/web dev\"",
+    "dev:api": "pnpm contracts:build && pnpm --filter @resolve-signal/api dev",
+    "dev:web": "pnpm contracts:build && pnpm --filter @resolve-signal/web dev",
+    "lint": "eslint .",
+    "typecheck": "pnpm contracts:build && pnpm --filter @resolve-signal/contracts typecheck && pnpm --filter @resolve-signal/api typecheck && pnpm --filter @resolve-signal/web typecheck",
+    "test": "pnpm contracts:build && pnpm --filter @resolve-signal/contracts test && pnpm --filter @resolve-signal/api test && pnpm --filter @resolve-signal/web test",
+    "db:start": "docker compose up -d postgres",
+    "db:stop": "docker compose down",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:seed": "prisma db seed",
+    "postinstall": "prisma generate"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@prisma/client": "^6.19.0",
+    "concurrently": "^9.2.1",
+    "eslint": "^9.39.1",
+    "globals": "^16.5.0",
+    "prisma": "^6.19.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.4",
+    "vitest": "^4.0.14"
+  }
+}

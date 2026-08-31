@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum FeedbackSource {
+  manual
+  web_form
+  support
+  store_review
+  api
+}
+
+enum FeedbackStatus {
+  new
+  triaged
+  in_progress
+  resolved
+  replied
+}
+
+enum Sentiment {
+  positive
+  neutral
+  negative
+  mixed
+}
+
+enum Severity {
+  low
+  medium
+  high
+  critical
+}
+
+enum FeedbackCategory {
+  product
+  service
+  delivery
+  payment
+  refund
+  support
+  account
+  other
+}
+
+enum ReplyStatus {
+  draft
+  approved
+  rejected
+}
+
+model FeedbackItem {
+  id          String                  @id @default(uuid()) @db.Uuid
+  source      FeedbackSource
+  externalId  String?                 @map("external_id") @db.VarChar(120)
+  rating      Int?
+  text        String                  @db.VarChar(5000)
+  authorName  String?                 @map("author_name") @db.VarChar(100)
+  customerRef String?                 @map("customer_ref") @db.VarChar(120)
+  status      FeedbackStatus          @default(new)
+  createdAt   DateTime                @default(now()) @map("created_at")
+  updatedAt   DateTime                @updatedAt @map("updated_at")
+  analyses    FeedbackAnalysis[]
+  replies     SuggestedReply[]
+
+  @@index([status, createdAt])
+  @@index([source, createdAt])
+  @@map("feedback_items")
+}
+
+model FeedbackAnalysis {
+  id            String           @id @default(uuid()) @db.Uuid
+  feedbackId    String           @map("feedback_id") @db.Uuid
+  sentiment     Sentiment
+  severity      Severity
+  category      FeedbackCategory
+  summary       String           @db.VarChar(1000)
+  problems      Json
+  provider      String           @db.VarChar(80)
+  model         String           @db.VarChar(120)
+  promptVersion String           @map("prompt_version") @db.VarChar(40)
+  inputTokens   Int?             @map("input_tokens")
+  outputTokens  Int?             @map("output_tokens")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  feedback      FeedbackItem     @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  replies       SuggestedReply[]
+
+  @@index([feedbackId, createdAt])
+  @@index([severity, category])
+  @@map("feedback_analyses")
+}
+
+model SuggestedReply {
+  id         String           @id @default(uuid()) @db.Uuid
+  feedbackId String           @map("feedback_id") @db.Uuid
+  analysisId String           @map("analysis_id") @db.Uuid
+  tone       String?          @db.VarChar(40)
+  text       String           @db.VarChar(5000)
+  status     ReplyStatus      @default(draft)
+  createdAt  DateTime         @default(now()) @map("created_at")
+  updatedAt  DateTime         @updatedAt @map("updated_at")
+  feedback   FeedbackItem     @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  analysis   FeedbackAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@index([feedbackId, createdAt])
+  @@map("suggested_replies")
+}

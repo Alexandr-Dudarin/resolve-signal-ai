@@ -1,0 +1,7 @@
+.state { display: flex; min-height: 180px; align-items: center; justify-content: center; gap: 12px; padding: 32px; color: var(--rs-text-secondary); text-align: left; }
+.state svg { width: 24px; color: var(--rs-accent); }
+.state strong { display: block; color: var(--rs-text); }
+.state p { margin: 4px 0 0; color: var(--rs-text-muted); }
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 520px) { .state { flex-direction: column; text-align: center; } }

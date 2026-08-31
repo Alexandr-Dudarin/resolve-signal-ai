@@ -1,0 +1,19 @@
+.root { --checkbox-size: 18px; --checkbox-radius: 5px; display: inline-flex; align-items: flex-start; gap: 10px; width: fit-content; max-width: 100%; color: var(--rs-text); cursor: pointer; user-select: none; }
+.rootSmall { --checkbox-size: 16px; --checkbox-radius: 4px; gap: 8px; font-size: 14px; }
+.rootMedium { --checkbox-size: 18px; --checkbox-radius: 5px; }
+.rootIconOnly { align-items: center; gap: 0; }
+.control { position: relative; display: inline-flex; flex: 0 0 auto; width: var(--checkbox-size); height: var(--checkbox-size); margin-top: .1em; }
+.input { position: absolute !important; inset: 0 !important; z-index: 2; width: 100% !important; height: 100% !important; margin: 0 !important; padding: 0 !important; border: 0 !important; opacity: 0; cursor: inherit; }
+.box { position: relative; display: inline-flex; align-items: center; justify-content: center; width: var(--checkbox-size); height: var(--checkbox-size); border: 1px solid var(--rs-border-strong); border-radius: var(--checkbox-radius); background: var(--rs-surface); color: white; box-shadow: var(--rs-shadow-sm); transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease; }
+.mark { font-size: calc(var(--checkbox-size) * .72); font-weight: 800; line-height: 1; opacity: 0; transform: scale(.72); transition: opacity 160ms ease, transform 160ms ease; }
+.copy { display: grid; gap: 3px; min-width: 0; }
+.label { color: var(--rs-text); line-height: 1.35; }
+.description { color: var(--rs-text-muted); font-size: 12px; line-height: 1.4; }
+.root:hover:not(.rootDisabled) .box { border-color: var(--rs-accent); box-shadow: var(--rs-shadow-md); }
+.input:checked + .box { border-color: var(--rs-accent); background: var(--rs-accent); }
+.input:checked + .box .mark { opacity: 1; transform: scale(1); }
+.input:focus-visible + .box { outline: none; border-color: var(--rs-accent); box-shadow: 0 0 0 3px var(--rs-accent-ring); }
+.input:active + .box { transform: scale(.96); }
+.rootDisabled { cursor: not-allowed; opacity: .62; }
+.rootDisabled .box { background: var(--rs-surface-muted); box-shadow: none; }
+@media (prefers-reduced-motion: reduce) { .box, .mark { transition: none; } }

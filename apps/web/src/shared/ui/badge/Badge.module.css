@@ -1,0 +1,6 @@
+.badge { display: inline-flex; align-items: center; min-height: 24px; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 650; white-space: nowrap; }
+.neutral { color: var(--rs-neutral); background: var(--rs-neutral-soft); }
+.positive { color: var(--rs-positive); background: var(--rs-positive-soft); }
+.warning { color: var(--rs-warning); background: var(--rs-warning-soft); }
+.critical { color: var(--rs-critical); background: var(--rs-critical-soft); }
+.accent { color: var(--rs-accent-hover); background: var(--rs-accent-soft); }

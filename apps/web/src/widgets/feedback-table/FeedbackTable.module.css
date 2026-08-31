@@ -1,0 +1,11 @@
+.wrap { width: 100%; overflow-x: auto; }
+.table { width: 100%; min-width: 940px; border-collapse: collapse; }
+.table th { padding: 12px 14px; border-bottom: 1px solid var(--rs-border); color: var(--rs-text-muted); font-size: 11px; font-weight: 700; letter-spacing: .03em; text-align: left; text-transform: uppercase; }
+.table td { padding: 14px; border-bottom: 1px solid var(--rs-border); color: var(--rs-text-secondary); font-size: 12px; vertical-align: middle; }
+.table tr:last-child td { border-bottom: 0; }.table tbody tr:hover { background: var(--rs-surface-hover); }
+.table td strong { display: block; color: var(--rs-text); font-size: 13px; }.table td small { display: block; max-width: 230px; margin-top: 4px; overflow: hidden; color: var(--rs-text-muted); text-overflow: ellipsis; white-space: nowrap; }
+.id { color: var(--rs-accent); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; font-weight: 700; }
+.rating { display: inline-flex; align-items: center; gap: 4px; color: var(--rs-text); font-weight: 650; }.rating svg { width: 14px; fill: var(--rs-rating); color: var(--rs-rating); }
+.muted { color: var(--rs-text-subtle); }.open { display: grid; width: 30px; height: 30px; place-items: center; border: 1px solid var(--rs-border); border-radius: 8px; }.open svg { width: 14px; }
+.cards { display: none; }.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+@media (max-width: 700px) { .table { display: none; } .cards { display: grid; gap: 10px; padding: 12px; } .card { display: grid; gap: 8px; padding: 14px; border: 1px solid var(--rs-border); border-radius: 12px; background: var(--rs-surface); } .card > div, .card footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; } .card > strong { font-size: 14px; }.card p { display: -webkit-box; margin: 0; overflow: hidden; color: var(--rs-text-muted); font-size: 13px; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }.card footer { padding-top: 8px; border-top: 1px solid var(--rs-border); color: var(--rs-text-muted); font-size: 11px; }.card footer svg { width: 15px; } }

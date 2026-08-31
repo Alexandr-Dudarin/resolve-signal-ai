@@ -1,0 +1,10 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+# Explicit install/build script policy for pnpm 11.
+# Required by Prisma and Vite/esbuild.
+allowBuilds:
+  "@prisma/client": true
+  "@prisma/engines": true
+  esbuild: true
+  prisma: true

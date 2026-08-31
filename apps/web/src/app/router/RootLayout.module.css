@@ -1,0 +1,14 @@
+.shell { min-height: 100vh; }
+.workspace { min-width: 0; margin-left: 252px; }
+.topbar { position: sticky; top: 0; z-index: 35; display: flex; height: 72px; align-items: center; justify-content: space-between; padding: 0 30px; border-bottom: 1px solid var(--rs-border); background: color-mix(in srgb, var(--rs-surface) 92%, transparent); backdrop-filter: blur(12px); }
+.demo { display: inline-flex; align-items: center; gap: 8px; color: var(--rs-text-muted); font-size: 12px; font-weight: 600; }
+.demo span { width: 7px; height: 7px; border-radius: 50%; background: var(--rs-positive); box-shadow: 0 0 0 4px var(--rs-positive-soft); }
+.profile { display: flex; align-items: center; gap: 9px; }
+.profile > svg { width: 31px; height: 31px; color: var(--rs-text-secondary); }
+.profile button { display: grid; width: 38px; height: 38px; margin-right: 7px; place-items: center; border: 1px solid var(--rs-border); border-radius: 10px; background: var(--rs-surface); color: var(--rs-text-secondary); cursor: pointer; }
+.profile button svg { width: 17px; }
+.profile strong, .profile small { display: block; }
+.profile strong { font-size: 12px; }.profile small { color: var(--rs-text-muted); font-size: 10px; margin-top: 2px; }
+.main { width: 100%; max-width: 1640px; margin: 0 auto; padding: 28px 30px 48px; }
+@media (max-width: 900px) { .workspace { margin-left: 0; } .topbar { padding: 0 18px 0 70px; } .main { padding: 24px 20px 40px; } }
+@media (max-width: 560px) { .topbar { height: 66px; } .demo { display: none; } .profile { margin-left: auto; } .profile span { display: none; } .main { padding: 20px 16px 36px; } }

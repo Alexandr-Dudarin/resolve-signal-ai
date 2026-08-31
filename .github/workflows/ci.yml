@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: resolve_signal
+          POSTGRES_USER: resolve_signal
+          POSTGRES_PASSWORD: resolve_signal
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U resolve_signal -d resolve_signal"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://resolve_signal:resolve_signal@localhost:5432/resolve_signal?schema=public
+      AI_PROVIDER: mock
+      CORS_ORIGIN: http://localhost:5173
+      VITE_API_URL: http://localhost:4000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:migrate
+      - run: pnpm db:seed
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build

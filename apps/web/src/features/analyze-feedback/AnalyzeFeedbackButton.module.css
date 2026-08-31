@@ -1,0 +1,2 @@
+.action { display: grid; justify-items: center; gap: 9px; }
+.action p { margin: 0; color: var(--rs-ai-text-muted); font-size: 11px; line-height: 1.4; }
