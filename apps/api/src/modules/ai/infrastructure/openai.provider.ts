@@ -10,7 +10,6 @@ import type {
 } from "../ports/llm-provider.js";
 
 const ANALYSIS_PROMPT_VERSION = "openai-analysis-v1";
-const REPLIES_PROMPT_VERSION = "openai-replies-v1";
 
 const GeneratedRepliesSchema = z.object({
   replies: z
