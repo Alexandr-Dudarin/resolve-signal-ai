@@ -6,19 +6,26 @@ import type {
 
 export const LLM_PROVIDER = Symbol("LLM_PROVIDER");
 
+export type LlmCallMetadata = {
+  provider: string;
+  model: string;
+  promptVersion: string;
+  inputTokens: number | null;
+  outputTokens: number | null;
+};
+
 export type GeneratedReply = {
   tone: string;
   text: string;
 };
 
+export type GeneratedRepliesResult = {
+  replies: GeneratedReply[];
+  metadata: LlmCallMetadata;
+};
+
 export type AnalysisResult = FeedbackAnalysis & {
-  metadata: {
-    provider: string;
-    model: string;
-    promptVersion: string;
-    inputTokens: number | null;
-    outputTokens: number | null;
-  };
+  metadata: LlmCallMetadata;
 };
 
 export type AnalyzeFeedbackInput = {
@@ -34,9 +41,10 @@ export type GenerateRepliesFeedbackInput = AnalyzeFeedbackInput & {
 
 export interface LLMProvider {
   analyzeFeedback(feedback: AnalyzeFeedbackInput): Promise<AnalysisResult>;
+
   generateReplies(
     feedback: GenerateRepliesFeedbackInput,
     analysis: PersistedFeedbackAnalysis,
     tones: string[],
-  ): Promise<GeneratedReply[]>;
+  ): Promise<GeneratedRepliesResult>;
 }

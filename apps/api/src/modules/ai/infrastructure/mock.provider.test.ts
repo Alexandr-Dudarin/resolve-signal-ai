@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import type { AnalyzeFeedbackInput, GenerateRepliesFeedbackInput } from "../ports/llm-provider.js";
+
+import type { PersistedFeedbackAnalysis } from "@resolve-signal/contracts";
+
+import type {
+  AnalyzeFeedbackInput,
+  GenerateRepliesFeedbackInput,
+} from "../ports/llm-provider.js";
+
 import { MockProvider } from "./mock.provider.js";
 
 const criticalFeedback: GenerateRepliesFeedbackInput = {
@@ -13,31 +20,65 @@ const criticalFeedback: GenerateRepliesFeedbackInput = {
 describe("MockProvider", () => {
   it("returns the approved deterministic critical payment analysis", async () => {
     const analysisInput: AnalyzeFeedbackInput = criticalFeedback;
+
     const result = await new MockProvider().analyzeFeedback(analysisInput);
+
     expect(result).toMatchObject({
       sentiment: "negative",
       severity: "critical",
       category: "payment",
       problems: ["повторное списание", "поддержка не отвечает"],
-      metadata: { provider: "mock", model: "resolve-mock-v1" },
+      metadata: {
+        provider: "mock",
+        model: "resolve-mock-v1",
+      },
     });
   });
 
-  it("generates a stable, customer-aware reply", async () => {
+  it("generates a stable, customer-aware reply with generation metadata", async () => {
     const provider = new MockProvider();
-    const analysis = await provider.analyzeFeedback(criticalFeedback);
-    const replies = await provider.generateReplies(
+
+    const analysisResult =
+      await provider.analyzeFeedback(criticalFeedback);
+
+    const { metadata, ...analysisPayload } = analysisResult;
+
+    const persistedAnalysis: PersistedFeedbackAnalysis = {
+      id: "22222222-2222-4222-8222-222222222222",
+      feedbackId: criticalFeedback.id,
+      ...analysisPayload,
+      ...metadata,
+      createdAt: "2026-08-30T14:32:12.000Z",
+    };
+
+    const result = await provider.generateReplies(
       criticalFeedback,
-      {
-        id: "analysis-id",
-        feedbackId: criticalFeedback.id,
-        ...analysis,
-        ...analysis.metadata,
-        createdAt: "2026-08-30T14:32:12.000Z",
-      },
+      persistedAnalysis,
       ["empathetic"],
     );
-    expect(replies[0]?.text).toContain("Здравствуйте, София!");
-    expect(replies[0]?.text).toContain("списаны повторно");
+
+    expect(result.replies).toHaveLength(1);
+
+    expect(result.replies[0]?.text).toContain(
+      "Здравствуйте, София!",
+    );
+
+    expect(result.replies[0]?.text).toContain(
+      "списаны повторно",
+    );
+
+    expect(result.metadata).toMatchObject({
+      provider: "mock",
+      model: "resolve-mock-v1",
+      promptVersion: "mock-replies-v1",
+    });
+
+    expect(result.metadata.inputTokens).toEqual(
+      expect.any(Number),
+    );
+
+    expect(result.metadata.outputTokens).toEqual(
+      expect.any(Number),
+    );
   });
 });

@@ -37,7 +37,10 @@ describe("OpenAIProvider", () => {
       },
     });
 
-    const provider = new OpenAIProvider("test-key", "test-model");
+    const provider = new OpenAIProvider(
+      "test-key",
+      "test-model",
+    );
 
     const result = await provider.analyzeFeedback({
       id: "11111111-1111-4111-8111-111111111111",
@@ -71,7 +74,10 @@ describe("OpenAIProvider", () => {
       store: false,
     });
 
-    expect(request.input).toContain("упаковка была сильно помята");
+    expect(request.input).toContain(
+      "упаковка была сильно помята",
+    );
+
     expect(request.instructions).toContain(
       "Sentiment и severity оцениваются независимо.",
     );
@@ -86,7 +92,10 @@ describe("OpenAIProvider", () => {
       },
     });
 
-    const provider = new OpenAIProvider("test-key", "test-model");
+    const provider = new OpenAIProvider(
+      "test-key",
+      "test-model",
+    );
 
     await expect(
       provider.analyzeFeedback({
@@ -95,10 +104,12 @@ describe("OpenAIProvider", () => {
         rating: null,
         text: "Тестовое обращение клиента.",
       }),
-    ).rejects.toThrow("OpenAI returned no parsed feedback analysis");
+    ).rejects.toThrow(
+      "OpenAI returned no parsed feedback analysis",
+    );
   });
 
-  it("returns generated replies for all requested tones", async () => {
+  it("returns generated replies with generation metadata", async () => {
     parseMock.mockResolvedValueOnce({
       output_parsed: {
         replies: [
@@ -118,7 +129,10 @@ describe("OpenAIProvider", () => {
       },
     });
 
-    const provider = new OpenAIProvider("test-key", "test-model");
+    const provider = new OpenAIProvider(
+      "test-key",
+      "test-model",
+    );
 
     const analysis: PersistedFeedbackAnalysis = {
       id: "22222222-2222-4222-8222-222222222222",
@@ -149,16 +163,25 @@ describe("OpenAIProvider", () => {
       ["concise", "empathetic"],
     );
 
-    expect(result).toEqual([
-      {
-        tone: "concise",
-        text: "Спасибо за отзыв. Нам жаль, что упаковка была повреждена.",
+    expect(result).toEqual({
+      replies: [
+        {
+          tone: "concise",
+          text: "Спасибо за отзыв. Нам жаль, что упаковка была повреждена.",
+        },
+        {
+          tone: "empathetic",
+          text: "Спасибо, что рассказали об этом. Рады, что товар оправдал ожидания, и нам жаль, что упаковка пришла повреждённой.",
+        },
+      ],
+      metadata: {
+        provider: "openai",
+        model: "test-model",
+        promptVersion: "openai-replies-v1",
+        inputTokens: 150,
+        outputTokens: 80,
       },
-      {
-        tone: "empathetic",
-        text: "Спасибо, что рассказали об этом. Рады, что товар оправдал ожидания, и нам жаль, что упаковка пришла повреждённой.",
-      },
-    ]);
+    });
 
     expect(parseMock).toHaveBeenCalledTimes(1);
   });
@@ -175,7 +198,10 @@ describe("OpenAIProvider", () => {
       },
     });
 
-    const provider = new OpenAIProvider("test-key", "test-model");
+    const provider = new OpenAIProvider(
+      "test-key",
+      "test-model",
+    );
 
     const analysis: PersistedFeedbackAnalysis = {
       id: "22222222-2222-4222-8222-222222222222",

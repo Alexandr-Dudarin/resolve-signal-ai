@@ -5,11 +5,12 @@ import { z } from "zod";
 
 import type {
   AnalysisResult,
-  GeneratedReply,
+  GeneratedRepliesResult,
   LLMProvider,
 } from "../ports/llm-provider.js";
 
 const ANALYSIS_PROMPT_VERSION = "openai-analysis-v1";
+const REPLIES_PROMPT_VERSION = "openai-replies-v1";
 
 const GeneratedRepliesSchema = z.object({
   replies: z
@@ -99,7 +100,7 @@ export class OpenAIProvider implements LLMProvider {
     feedback: Parameters<LLMProvider["generateReplies"]>[0],
     analysis: Parameters<LLMProvider["generateReplies"]>[1],
     tones: string[],
-  ): Promise<GeneratedReply[]> {
+  ): Promise<GeneratedRepliesResult> {
     const response = await this.client.responses.parse({
       model: this.model,
       store: false,
@@ -148,7 +149,9 @@ export class OpenAIProvider implements LLMProvider {
     const parsed = GeneratedRepliesSchema.parse(response.output_parsed);
 
     const requestedTones = new Set(tones);
-    const returnedTones = new Set(parsed.replies.map((reply) => reply.tone));
+    const returnedTones = new Set(
+      parsed.replies.map((reply) => reply.tone),
+    );
 
     const hasUnexpectedTone = parsed.replies.some(
       (reply) => !requestedTones.has(reply.tone),
@@ -164,6 +167,15 @@ export class OpenAIProvider implements LLMProvider {
       );
     }
 
-    return parsed.replies;
+    return {
+      replies: parsed.replies,
+      metadata: {
+        provider: "openai",
+        model: this.model,
+        promptVersion: REPLIES_PROMPT_VERSION,
+        inputTokens: response.usage?.input_tokens ?? null,
+        outputTokens: response.usage?.output_tokens ?? null,
+      },
+    };
   }
 }
