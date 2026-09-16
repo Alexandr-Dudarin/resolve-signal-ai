@@ -164,6 +164,12 @@ export const DashboardSummarySchema = z.object({
   recentFeedback: z.array(FeedbackListItemSchema),
 });
 
+export const AiRuntimeStatusSchema = z.object({
+  provider: z.enum(["mock", "openai"]),
+  model: z.string().min(1),
+  mode: z.enum(["demo", "live"]),
+});
+
 export type FeedbackSource = z.infer<typeof FeedbackSourceSchema>;
 export type FeedbackStatus = z.infer<typeof FeedbackStatusSchema>;
 export type Sentiment = z.infer<typeof SentimentSchema>;
@@ -183,3 +189,4 @@ export type UpdateFeedbackStatusInput = z.infer<typeof UpdateFeedbackStatusSchem
 export type GenerateRepliesInput = z.infer<typeof GenerateRepliesSchema>;
 export type UpdateReplyInput = z.infer<typeof UpdateReplySchema>;
 export type DashboardSummary = z.infer<typeof DashboardSummarySchema>;
+export type AiRuntimeStatus = z.infer<typeof AiRuntimeStatusSchema>;

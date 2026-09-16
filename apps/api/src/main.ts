@@ -15,7 +15,7 @@ async function bootstrap() {
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle("ResolveSignal AI API")
-    .setDescription("Versioned feedback operations API. This build uses a deterministic MockProvider.")
+    .setDescription("Versioned feedback operations API with a configurable AI provider.")
     .setVersion("1.0")
     .build();
   SwaggerModule.setup("api/docs", app, SwaggerModule.createDocument(app, swaggerConfig));
