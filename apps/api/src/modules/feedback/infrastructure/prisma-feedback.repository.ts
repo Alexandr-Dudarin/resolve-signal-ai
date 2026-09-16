@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
+
 import {
   FeedbackAnalysisSchema,
   type CreateFeedbackInput,
@@ -12,8 +13,14 @@ import {
   type SuggestedReply,
   type UpdateReplyInput,
 } from "@resolve-signal/contracts";
+
 import { PrismaService } from "../../../app/prisma.service.js";
-import type { AnalysisResult, GeneratedReply } from "../../ai/ports/llm-provider.js";
+
+import type {
+  AnalysisResult,
+  GeneratedRepliesResult,
+} from "../../ai/ports/llm-provider.js";
+
 import type { FeedbackRepository } from "../domain/feedback.repository.js";
 
 function mapAnalysis(row: any): PersistedFeedbackAnalysis {
@@ -24,6 +31,7 @@ function mapAnalysis(row: any): PersistedFeedbackAnalysis {
     summary: row.summary,
     problems: row.problems,
   });
+
   return {
     id: row.id,
     feedbackId: row.feedbackId,
@@ -62,119 +70,372 @@ function mapFeedback(row: any): FeedbackListItem {
     status: row.status,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
-    latestAnalysis: row.analyses?.[0] ? mapAnalysis(row.analyses[0]) : null,
+    latestAnalysis: row.analyses?.[0]
+      ? mapAnalysis(row.analyses[0])
+      : null,
   };
 }
 
 function mapDetails(row: any): FeedbackDetails {
+  const activeGenerationId =
+    row.replyGenerations?.[0]?.id ?? null;
+
+  const replies = row.replies ?? [];
+
+  const visibleReplies = activeGenerationId
+    ? replies.filter(
+        (reply: any) =>
+          reply.generationId === activeGenerationId ||
+          reply.status === "approved" ||
+          reply.status === "rejected",
+      )
+    : replies;
+
   return {
     ...mapFeedback(row),
-    suggestedReplies: (row.replies ?? []).map(mapReply),
+    suggestedReplies: visibleReplies.map(mapReply),
   };
 }
 
 const detailsInclude = {
-  analyses: { orderBy: { createdAt: "desc" as const }, take: 1 },
-  replies: { orderBy: { createdAt: "desc" as const } },
+  analyses: {
+    orderBy: {
+      createdAt: "desc" as const,
+    },
+    take: 1,
+  },
+
+  replyGenerations: {
+    where: {
+      supersededAt: null,
+    },
+    orderBy: {
+      createdAt: "desc" as const,
+    },
+    take: 1,
+    select: {
+      id: true,
+    },
+  },
+
+  replies: {
+    orderBy: {
+      createdAt: "desc" as const,
+    },
+  },
 };
 
 @Injectable()
-export class PrismaFeedbackRepository implements FeedbackRepository {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+export class PrismaFeedbackRepository
+  implements FeedbackRepository
+{
+  constructor(
+    @Inject(PrismaService)
+    private readonly prisma: PrismaService,
+  ) {}
 
-  async create(input: CreateFeedbackInput): Promise<FeedbackDetails> {
+  async create(
+    input: CreateFeedbackInput,
+  ): Promise<FeedbackDetails> {
     const row = await this.prisma.feedbackItem.create({
       data: input,
       include: detailsInclude,
     });
+
     return mapDetails(row);
   }
 
-  async list(query: FeedbackListQuery): Promise<FeedbackListResponse> {
+  async list(
+    query: FeedbackListQuery,
+  ): Promise<FeedbackListResponse> {
     const where: Prisma.FeedbackItemWhereInput = {
-      ...(query.status ? { status: query.status } : {}),
-      ...(query.source ? { source: query.source } : {}),
+      ...(query.status
+        ? {
+            status: query.status,
+          }
+        : {}),
+
+      ...(query.source
+        ? {
+            source: query.source,
+          }
+        : {}),
+
       ...(query.severity || query.category
         ? {
             analyses: {
               some: {
-                ...(query.severity ? { severity: query.severity } : {}),
-                ...(query.category ? { category: query.category } : {}),
+                ...(query.severity
+                  ? {
+                      severity: query.severity,
+                    }
+                  : {}),
+
+                ...(query.category
+                  ? {
+                      category: query.category,
+                    }
+                  : {}),
               },
             },
           }
         : {}),
+
       ...(query.search
         ? {
             OR: [
-              { text: { contains: query.search, mode: "insensitive" } },
-              { authorName: { contains: query.search, mode: "insensitive" } },
-              { customerRef: { contains: query.search, mode: "insensitive" } },
-              { externalId: { contains: query.search, mode: "insensitive" } },
+              {
+                text: {
+                  contains: query.search,
+                  mode: "insensitive",
+                },
+              },
+              {
+                authorName: {
+                  contains: query.search,
+                  mode: "insensitive",
+                },
+              },
+              {
+                customerRef: {
+                  contains: query.search,
+                  mode: "insensitive",
+                },
+              },
+              {
+                externalId: {
+                  contains: query.search,
+                  mode: "insensitive",
+                },
+              },
             ],
           }
         : {}),
     };
 
-    const [rows, total] = await this.prisma.$transaction([
-      this.prisma.feedbackItem.findMany({
-        where,
-        include: { analyses: { orderBy: { createdAt: "desc" }, take: 1 } },
-        orderBy: { createdAt: "desc" },
-        skip: (query.page - 1) * query.pageSize,
-        take: query.pageSize,
-      }),
-      this.prisma.feedbackItem.count({ where }),
-    ]);
+    const [rows, total] =
+      await this.prisma.$transaction([
+        this.prisma.feedbackItem.findMany({
+          where,
+          include: {
+            analyses: {
+              orderBy: {
+                createdAt: "desc",
+              },
+              take: 1,
+            },
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+          skip: (query.page - 1) * query.pageSize,
+          take: query.pageSize,
+        }),
 
-    return { items: rows.map(mapFeedback), total, page: query.page, pageSize: query.pageSize };
+        this.prisma.feedbackItem.count({
+          where,
+        }),
+      ]);
+
+    return {
+      items: rows.map(mapFeedback),
+      total,
+      page: query.page,
+      pageSize: query.pageSize,
+    };
   }
 
-  async findById(id: string): Promise<FeedbackDetails | null> {
-    const row = await this.prisma.feedbackItem.findUnique({ where: { id }, include: detailsInclude });
+  async findById(
+    id: string,
+  ): Promise<FeedbackDetails | null> {
+    const row =
+      await this.prisma.feedbackItem.findUnique({
+        where: {
+          id,
+        },
+        include: detailsInclude,
+      });
+
     return row ? mapDetails(row) : null;
   }
 
-  async saveAnalysis(feedbackId: string, result: AnalysisResult): Promise<PersistedFeedbackAnalysis> {
+  async saveAnalysis(
+    feedbackId: string,
+    result: AnalysisResult,
+  ): Promise<PersistedFeedbackAnalysis> {
     const { metadata, ...analysis } = result;
-    const row = await this.prisma.feedbackAnalysis.create({
-      data: {
-        feedbackId,
-        ...analysis,
-        ...metadata,
-      },
-    });
+
+    const row =
+      await this.prisma.feedbackAnalysis.create({
+        data: {
+          feedbackId,
+          ...analysis,
+          ...metadata,
+        },
+      });
+
     return mapAnalysis(row);
   }
 
-  async saveReplies(feedbackId: string, analysisId: string, replies: GeneratedReply[]): Promise<SuggestedReply[]> {
+  async saveReplies(
+    feedbackId: string,
+    analysisId: string,
+    result: GeneratedRepliesResult,
+  ): Promise<SuggestedReply[]> {
     const rows = await this.prisma.$transaction(
-      replies.map((reply) =>
-        this.prisma.suggestedReply.create({ data: { feedbackId, analysisId, ...reply } }),
-      ),
+      async (tx) => {
+        const now = new Date();
+
+        await tx.replyGeneration.updateMany({
+          where: {
+            feedbackId,
+            supersededAt: null,
+          },
+          data: {
+            supersededAt: now,
+          },
+        });
+
+        const generation =
+          await tx.replyGeneration.create({
+            data: {
+              feedbackId,
+              analysisId,
+              provider: result.metadata.provider,
+              model: result.metadata.model,
+              promptVersion:
+                result.metadata.promptVersion,
+              inputTokens:
+                result.metadata.inputTokens,
+              outputTokens:
+                result.metadata.outputTokens,
+            },
+          });
+
+        return Promise.all(
+          result.replies.map((reply) =>
+            tx.suggestedReply.create({
+              data: {
+                feedbackId,
+                analysisId,
+                generationId: generation.id,
+                tone: reply.tone,
+
+                originalText: reply.text,
+                text: reply.text,
+              },
+            }),
+          ),
+        );
+      },
     );
+
     return rows.map(mapReply);
   }
 
-  async updateStatus(id: string, status: FeedbackStatus): Promise<FeedbackDetails | null> {
-    const exists = await this.prisma.feedbackItem.findUnique({ where: { id }, select: { id: true } });
-    if (!exists) return null;
-    const row = await this.prisma.feedbackItem.update({ where: { id }, data: { status }, include: detailsInclude });
+  async updateStatus(
+    id: string,
+    status: FeedbackStatus,
+  ): Promise<FeedbackDetails | null> {
+    const exists =
+      await this.prisma.feedbackItem.findUnique({
+        where: {
+          id,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+    if (!exists) {
+      return null;
+    }
+
+    const row =
+      await this.prisma.feedbackItem.update({
+        where: {
+          id,
+        },
+        data: {
+          status,
+        },
+        include: detailsInclude,
+      });
+
     return mapDetails(row);
   }
 
-  async updateReply(id: string, input: UpdateReplyInput): Promise<SuggestedReply | null> {
-    const exists = await this.prisma.suggestedReply.findUnique({ where: { id }, select: { id: true } });
-    if (!exists) return null;
-    const row = await this.prisma.suggestedReply.update({ where: { id }, data: input });
+  async updateReply(
+    id: string,
+    input: UpdateReplyInput,
+  ): Promise<SuggestedReply | null> {
+    const existing =
+      await this.prisma.suggestedReply.findUnique({
+        where: {
+          id,
+        },
+        select: {
+          id: true,
+          text: true,
+          originalText: true,
+        },
+      });
+
+    if (!existing) {
+      return null;
+    }
+
+    const data: Prisma.SuggestedReplyUpdateInput = {};
+
+    if (input.text !== undefined) {
+      data.text = input.text;
+
+      if (existing.originalText !== null) {
+        data.editedAt =
+          input.text === existing.originalText
+            ? null
+            : new Date();
+      } else if (input.text !== existing.text) {
+        data.editedAt = new Date();
+      }
+    }
+
+    if (input.status !== undefined) {
+      data.status = input.status;
+    }
+
+    const row =
+      await this.prisma.suggestedReply.update({
+        where: {
+          id,
+        },
+        data,
+      });
+
     return mapReply(row);
   }
 
   async allForDashboard(): Promise<FeedbackListResponse> {
-    const rows = await this.prisma.feedbackItem.findMany({
-      include: { analyses: { orderBy: { createdAt: "desc" }, take: 1 } },
-      orderBy: { createdAt: "desc" },
-    });
-    return { items: rows.map(mapFeedback), total: rows.length, page: 1, pageSize: rows.length || 1 };
+    const rows =
+      await this.prisma.feedbackItem.findMany({
+        include: {
+          analyses: {
+            orderBy: {
+              createdAt: "desc",
+            },
+            take: 1,
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+
+    return {
+      items: rows.map(mapFeedback),
+      total: rows.length,
+      page: 1,
+      pageSize: rows.length || 1,
+    };
   }
 }
