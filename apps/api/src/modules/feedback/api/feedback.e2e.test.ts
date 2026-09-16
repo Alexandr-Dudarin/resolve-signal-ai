@@ -35,6 +35,7 @@ class MemoryFeedbackRepository implements FeedbackRepository {
       createdAt: now,
       updatedAt: now,
       latestAnalysis: null,
+      currentReplyGeneration: null,
       suggestedReplies: [],
     };
     this.items.push(item);

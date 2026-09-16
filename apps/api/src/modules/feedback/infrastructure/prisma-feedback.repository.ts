@@ -10,6 +10,7 @@ import {
   type FeedbackListResponse,
   type FeedbackStatus,
   type PersistedFeedbackAnalysis,
+  type ReplyGeneration,
   type SuggestedReply,
   type UpdateReplyInput,
 } from "@resolve-signal/contracts";
@@ -50,11 +51,29 @@ function mapReply(row: any): SuggestedReply {
     id: row.id,
     feedbackId: row.feedbackId,
     analysisId: row.analysisId,
+    generationId: row.generationId,
     tone: row.tone,
+    originalText: row.originalText,
     text: row.text,
     status: row.status,
+    editedAt: row.editedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+function mapReplyGeneration(row: any): ReplyGeneration {
+  return {
+    id: row.id,
+    feedbackId: row.feedbackId,
+    analysisId: row.analysisId,
+    provider: row.provider,
+    model: row.model,
+    promptVersion: row.promptVersion,
+    inputTokens: row.inputTokens,
+    outputTokens: row.outputTokens,
+    supersededAt: row.supersededAt?.toISOString() ?? null,
+    createdAt: row.createdAt.toISOString(),
   };
 }
 
@@ -77,8 +96,11 @@ function mapFeedback(row: any): FeedbackListItem {
 }
 
 function mapDetails(row: any): FeedbackDetails {
-  const activeGenerationId =
-    row.replyGenerations?.[0]?.id ?? null;
+  const currentReplyGeneration = row.replyGenerations?.[0]
+    ? mapReplyGeneration(row.replyGenerations[0])
+    : null;
+
+  const activeGenerationId = currentReplyGeneration?.id ?? null;
 
   const replies = row.replies ?? [];
 
@@ -93,6 +115,7 @@ function mapDetails(row: any): FeedbackDetails {
 
   return {
     ...mapFeedback(row),
+    currentReplyGeneration,
     suggestedReplies: visibleReplies.map(mapReply),
   };
 }
@@ -115,6 +138,15 @@ const detailsInclude = {
     take: 1,
     select: {
       id: true,
+      feedbackId: true,
+      analysisId: true,
+      provider: true,
+      model: true,
+      promptVersion: true,
+      inputTokens: true,
+      outputTokens: true,
+      supersededAt: true,
+      createdAt: true,
     },
   },
 

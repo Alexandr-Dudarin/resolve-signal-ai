@@ -21,6 +21,7 @@ describe("PrismaFeedbackRepository reply history", () => {
   let suggestedReplyCreate: ReturnType<typeof vi.fn>;
   let suggestedReplyFindUnique: ReturnType<typeof vi.fn>;
   let suggestedReplyUpdate: ReturnType<typeof vi.fn>;
+  let feedbackItemFindUnique: ReturnType<typeof vi.fn>;
 
   let repository: PrismaFeedbackRepository;
 
@@ -40,6 +41,7 @@ describe("PrismaFeedbackRepository reply history", () => {
           id: `reply-${data.tone}`,
           ...data,
           status: "draft",
+          editedAt: null,
           createdAt,
           updatedAt: createdAt,
         }),
@@ -48,6 +50,7 @@ describe("PrismaFeedbackRepository reply history", () => {
     suggestedReplyFindUnique = vi.fn();
 
     suggestedReplyUpdate = vi.fn();
+    feedbackItemFindUnique = vi.fn();
 
     const transactionClient = {
       replyGeneration: {
@@ -72,6 +75,10 @@ describe("PrismaFeedbackRepository reply history", () => {
       suggestedReply: {
         findUnique: suggestedReplyFindUnique,
         update: suggestedReplyUpdate,
+      },
+
+      feedbackItem: {
+        findUnique: feedbackItemFindUnique,
       },
     } as unknown as PrismaService;
 
@@ -258,5 +265,183 @@ describe("PrismaFeedbackRepository reply history", () => {
         editedAt: expect.any(Date),
       },
     });
+  });
+
+  it("maps the active generation, current replies, and historical decisions", async () => {
+    const currentGenerationId =
+      "33333333-3333-4333-8333-333333333333";
+    const supersededGenerationId =
+      "44444444-4444-4444-8444-444444444444";
+
+    feedbackItemFindUnique.mockResolvedValue({
+      id: feedbackId,
+      source: "manual",
+      externalId: null,
+      rating: 2,
+      text: "Нужно проверить варианты ответа.",
+      authorName: "Мария",
+      customerRef: null,
+      status: "new",
+      createdAt,
+      updatedAt: createdAt,
+      analyses: [],
+      replyGenerations: [
+        {
+          id: currentGenerationId,
+          feedbackId,
+          analysisId,
+          provider: "openai",
+          model: "gpt-5.6-luna",
+          promptVersion: "openai-replies-v1",
+          inputTokens: 268,
+          outputTokens: 168,
+          supersededAt: null,
+          createdAt,
+        },
+      ],
+      replies: [
+        {
+          id: "55555555-5555-4555-8555-555555555555",
+          feedbackId,
+          analysisId,
+          generationId: currentGenerationId,
+          tone: "empathetic",
+          originalText: "Текущий черновик.",
+          text: "Текущий черновик.",
+          status: "draft",
+          editedAt: null,
+          createdAt,
+          updatedAt: createdAt,
+        },
+        {
+          id: "66666666-6666-4666-8666-666666666666",
+          feedbackId,
+          analysisId,
+          generationId: supersededGenerationId,
+          tone: "concise",
+          originalText: "Старый черновик.",
+          text: "Старый черновик.",
+          status: "draft",
+          editedAt: null,
+          createdAt,
+          updatedAt: createdAt,
+        },
+        {
+          id: "77777777-7777-4777-8777-777777777777",
+          feedbackId,
+          analysisId,
+          generationId: supersededGenerationId,
+          tone: "empathetic",
+          originalText: "Историческое решение.",
+          text: "Историческое решение после правки.",
+          status: "approved",
+          editedAt: createdAt,
+          createdAt,
+          updatedAt: createdAt,
+        },
+        {
+          id: "88888888-8888-4888-8888-888888888888",
+          feedbackId,
+          analysisId,
+          generationId: null,
+          tone: "concise",
+          originalText: null,
+          text: "Старый legacy-черновик.",
+          status: "draft",
+          editedAt: null,
+          createdAt,
+          updatedAt: createdAt,
+        },
+        {
+          id: "99999999-9999-4999-8999-999999999999",
+          feedbackId,
+          analysisId,
+          generationId: null,
+          tone: "concise",
+          originalText: null,
+          text: "Старое отклонённое решение.",
+          status: "rejected",
+          editedAt: null,
+          createdAt,
+          updatedAt: createdAt,
+        },
+      ],
+    });
+
+    const details = await repository.findById(feedbackId);
+
+    expect(details?.currentReplyGeneration).toEqual({
+      id: currentGenerationId,
+      feedbackId,
+      analysisId,
+      provider: "openai",
+      model: "gpt-5.6-luna",
+      promptVersion: "openai-replies-v1",
+      inputTokens: 268,
+      outputTokens: 168,
+      supersededAt: null,
+      createdAt: createdAt.toISOString(),
+    });
+
+    expect(details?.suggestedReplies.map((reply) => reply.id)).toEqual([
+      "55555555-5555-4555-8555-555555555555",
+      "77777777-7777-4777-8777-777777777777",
+      "99999999-9999-4999-8999-999999999999",
+    ]);
+
+    expect(details?.suggestedReplies[1]).toMatchObject({
+      originalText: "Историческое решение.",
+      editedAt: createdAt.toISOString(),
+    });
+  });
+
+  it("keeps all legacy replies visible before the first generation", async () => {
+    feedbackItemFindUnique.mockResolvedValue({
+      id: feedbackId,
+      source: "manual",
+      externalId: null,
+      rating: null,
+      text: "Обращение со старыми ответами.",
+      authorName: null,
+      customerRef: null,
+      status: "new",
+      createdAt,
+      updatedAt: createdAt,
+      analyses: [],
+      replyGenerations: [],
+      replies: [
+        {
+          id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          feedbackId,
+          analysisId,
+          generationId: null,
+          tone: "empathetic",
+          originalText: null,
+          text: "Legacy-черновик.",
+          status: "draft",
+          editedAt: null,
+          createdAt,
+          updatedAt: createdAt,
+        },
+        {
+          id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+          feedbackId,
+          analysisId,
+          generationId: null,
+          tone: "concise",
+          originalText: null,
+          text: "Legacy-решение.",
+          status: "approved",
+          editedAt: null,
+          createdAt,
+          updatedAt: createdAt,
+        },
+      ],
+    });
+
+    const details = await repository.findById(feedbackId);
+
+    expect(details?.currentReplyGeneration).toBeNull();
+    expect(details?.suggestedReplies).toHaveLength(2);
   });
 });
