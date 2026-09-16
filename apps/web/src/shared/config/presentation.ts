@@ -60,6 +60,11 @@ export const replyToneLabels: Record<string, string> = {
   warm: "Тёплый",
 };
 
+export const aiProviderLabels: Record<string, string> = {
+  mock: "AI-демо",
+  openai: "OpenAI",
+};
+
 const enumLabels: Record<string, string> = {
   ...feedbackSourceLabels,
   ...feedbackStatusLabels,
@@ -76,4 +81,8 @@ export function getPresentationLabel(value: string) {
 
 export function getReplyToneLabel(value: string | null) {
   return value ? replyToneLabels[value] ?? "Предложенный" : "Предложенный";
+}
+
+export function getAiProviderLabel(value: string) {
+  return aiProviderLabels[value] ?? value;
 }

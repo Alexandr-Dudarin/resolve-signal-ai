@@ -26,6 +26,7 @@ const createdFeedback = {
   createdAt: "2026-08-30T15:00:00.000Z",
   updatedAt: "2026-08-30T15:00:00.000Z",
   latestAnalysis: null,
+  currentReplyGeneration: null,
   suggestedReplies: [],
 };
 
