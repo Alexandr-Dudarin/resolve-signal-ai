@@ -73,13 +73,29 @@ export const PersistedFeedbackAnalysisSchema = FeedbackAnalysisSchema.extend({
   createdAt: z.string().datetime(),
 });
 
+export const ReplyGenerationSchema = z.object({
+  id: EntityIdSchema,
+  feedbackId: EntityIdSchema,
+  analysisId: EntityIdSchema,
+  provider: z.string(),
+  model: z.string(),
+  promptVersion: z.string(),
+  inputTokens: z.number().int().nonnegative().nullable(),
+  outputTokens: z.number().int().nonnegative().nullable(),
+  supersededAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime(),
+});
+
 export const SuggestedReplySchema = z.object({
   id: EntityIdSchema,
   feedbackId: EntityIdSchema,
   analysisId: EntityIdSchema,
+  generationId: EntityIdSchema.nullable(),
   tone: z.string().nullable(),
+  originalText: z.string().min(1).max(5000).nullable(),
   text: z.string().min(1).max(5000),
   status: ReplyStatusSchema,
+  editedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -99,6 +115,7 @@ export const FeedbackListItemSchema = z.object({
 });
 
 export const FeedbackDetailsSchema = FeedbackListItemSchema.extend({
+  currentReplyGeneration: ReplyGenerationSchema.nullable(),
   suggestedReplies: z.array(SuggestedReplySchema),
 });
 
@@ -147,6 +164,12 @@ export const DashboardSummarySchema = z.object({
   recentFeedback: z.array(FeedbackListItemSchema),
 });
 
+export const AiRuntimeStatusSchema = z.object({
+  provider: z.enum(["mock", "openai"]),
+  model: z.string().min(1),
+  mode: z.enum(["demo", "live"]),
+});
+
 export type FeedbackSource = z.infer<typeof FeedbackSourceSchema>;
 export type FeedbackStatus = z.infer<typeof FeedbackStatusSchema>;
 export type Sentiment = z.infer<typeof SentimentSchema>;
@@ -156,6 +179,7 @@ export type ReplyStatus = z.infer<typeof ReplyStatusSchema>;
 export type CreateFeedbackInput = z.infer<typeof CreateFeedbackSchema>;
 export type FeedbackAnalysis = z.infer<typeof FeedbackAnalysisSchema>;
 export type PersistedFeedbackAnalysis = z.infer<typeof PersistedFeedbackAnalysisSchema>;
+export type ReplyGeneration = z.infer<typeof ReplyGenerationSchema>;
 export type SuggestedReply = z.infer<typeof SuggestedReplySchema>;
 export type FeedbackListItem = z.infer<typeof FeedbackListItemSchema>;
 export type FeedbackDetails = z.infer<typeof FeedbackDetailsSchema>;
@@ -165,3 +189,4 @@ export type UpdateFeedbackStatusInput = z.infer<typeof UpdateFeedbackStatusSchem
 export type GenerateRepliesInput = z.infer<typeof GenerateRepliesSchema>;
 export type UpdateReplyInput = z.infer<typeof UpdateReplySchema>;
 export type DashboardSummary = z.infer<typeof DashboardSummarySchema>;
+export type AiRuntimeStatus = z.infer<typeof AiRuntimeStatusSchema>;

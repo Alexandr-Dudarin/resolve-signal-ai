@@ -1,6 +1,7 @@
 import { Activity, Bot, Braces, Inbox, LayoutDashboard, Menu, Plus, Sparkles, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { NavLink } from "react-router-dom";
+import { useAiRuntimeStatus } from "../../shared/api/use-ai-runtime-status";
 import styles from "./AppSidebar.module.css";
 
 const mainNav = [
@@ -19,6 +20,7 @@ export function AppSidebar() {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
+  const runtimeStatus = useAiRuntimeStatus();
   const close = () => {
     setOpen(false);
     window.requestAnimationFrame(() => triggerRef.current?.focus());
@@ -39,6 +41,30 @@ export function AppSidebar() {
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [open]);
+
+  const aiStatusCopy = runtimeStatus.isPending
+    ? {
+        title: "Проверяем AI-режим…",
+        description: "Получаем статус подключения",
+        detail: "Безопасная конфигурация",
+      }
+    : runtimeStatus.isError
+      ? {
+          title: "AI-статус недоступен",
+          description: "Проверьте соединение с API",
+          detail: "Режим не определён",
+        }
+      : runtimeStatus.data.mode === "live"
+        ? {
+            title: "Live AI работает",
+            description: "OpenAI подключён",
+            detail: runtimeStatus.data.model,
+          }
+        : {
+            title: "AI-демо работает",
+            description: "Детерминированный AI-анализ включён",
+            detail: "Внешняя AI-модель не требуется",
+          };
 
   return (
     <>
@@ -69,9 +95,9 @@ export function AppSidebar() {
           ))}
         </nav>
         <div className={styles.aiStatus}>
-          <div><span className={styles.pulse} /><strong>AI-демо работает</strong></div>
-          <p>Детерминированный AI-анализ включён</p>
-          <small>Ключ внешней AI-модели не требуется</small>
+          <div><span className={`${styles.pulse} ${runtimeStatus.isError ? styles.pulseError : runtimeStatus.isPending ? styles.pulsePending : ""}`} /><strong>{aiStatusCopy.title}</strong></div>
+          <p>{aiStatusCopy.description}</p>
+          <small>{aiStatusCopy.detail}</small>
         </div>
       </aside>
     </>

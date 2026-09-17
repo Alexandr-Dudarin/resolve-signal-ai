@@ -65,3 +65,4 @@ ALTER TABLE "suggested_replies"
 ALTER TABLE "suggested_replies"
   ADD CONSTRAINT "suggested_replies_analysis_id_fkey"
   FOREIGN KEY ("analysis_id") REFERENCES "feedback_analyses"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+

@@ -57,7 +57,11 @@ export function FeedbackDetailsPage() {
         </section>
         {feedback.latestAnalysis ? <FeedbackAnalysisPanel analysis={feedback.latestAnalysis} /> : <section className={styles.analysisEmpty}><div><Sparkles aria-hidden="true" /></div><span>AI-анализ</span><h2>Получите структурированный разбор обращения.</h2><p>AI-демо определит тональность, критичность, категорию, краткое содержание и основные проблемы.</p><AnalyzeFeedbackButton feedbackId={feedback.id} /></section>}
       </div>
-      <SuggestedReplies feedbackId={feedback.id} replies={feedback.suggestedReplies} />
+      <SuggestedReplies
+        feedbackId={feedback.id}
+        currentGeneration={feedback.currentReplyGeneration}
+        replies={feedback.suggestedReplies}
+      />
     </>
   );
 }

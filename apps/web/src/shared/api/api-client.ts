@@ -1,4 +1,5 @@
 import {
+  AiRuntimeStatusSchema,
   DashboardSummarySchema,
   FeedbackDetailsSchema,
   FeedbackListResponseSchema,
@@ -40,6 +41,7 @@ function queryString(query: FeedbackListQuery) {
 }
 
 export const api = {
+  aiRuntimeStatus: () => request("/api/v1/ai/runtime-status", AiRuntimeStatusSchema),
   dashboard: () => request("/api/v1/dashboard/summary", DashboardSummarySchema),
   listFeedback: (query: FeedbackListQuery) =>
     request(`/api/v1/feedback?${queryString(query)}`, FeedbackListResponseSchema),

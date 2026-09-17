@@ -3,6 +3,7 @@ import {
   feedbackCategoryLabels,
   feedbackSourceLabels,
   feedbackStatusLabels,
+  getAiProviderLabel,
   getPresentationLabel,
   getReplyToneLabel,
   sentimentLabels,
@@ -18,6 +19,8 @@ describe("presentation labels", () => {
     expect(sentimentLabels.negative).toBe("Негативная");
     expect(severityLabels.critical).toBe("Критическая");
     expect(getPresentationLabel("approved")).toBe("Одобрен");
+    expect(getAiProviderLabel("openai")).toBe("OpenAI");
+    expect(getAiProviderLabel("mock")).toBe("AI-демо");
   });
 
   it("keeps unknown technical values stable and uses a safe tone fallback", () => {

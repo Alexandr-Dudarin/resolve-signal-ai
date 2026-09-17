@@ -55,18 +55,19 @@ enum ReplyStatus {
 }
 
 model FeedbackItem {
-  id          String                  @id @default(uuid()) @db.Uuid
-  source      FeedbackSource
-  externalId  String?                 @map("external_id") @db.VarChar(120)
-  rating      Int?
-  text        String                  @db.VarChar(5000)
-  authorName  String?                 @map("author_name") @db.VarChar(100)
-  customerRef String?                 @map("customer_ref") @db.VarChar(120)
-  status      FeedbackStatus          @default(new)
-  createdAt   DateTime                @default(now()) @map("created_at")
-  updatedAt   DateTime                @updatedAt @map("updated_at")
-  analyses    FeedbackAnalysis[]
-  replies     SuggestedReply[]
+  id               String             @id @default(uuid()) @db.Uuid
+  source           FeedbackSource
+  externalId       String?            @map("external_id") @db.VarChar(120)
+  rating           Int?
+  text             String             @db.VarChar(5000)
+  authorName       String?            @map("author_name") @db.VarChar(100)
+  customerRef      String?            @map("customer_ref") @db.VarChar(120)
+  status           FeedbackStatus     @default(new)
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+  analyses         FeedbackAnalysis[]
+  replies          SuggestedReply[]
+  replyGenerations ReplyGeneration[]
 
   @@index([status, createdAt])
   @@index([source, createdAt])
@@ -74,39 +75,69 @@ model FeedbackItem {
 }
 
 model FeedbackAnalysis {
-  id            String           @id @default(uuid()) @db.Uuid
-  feedbackId    String           @map("feedback_id") @db.Uuid
-  sentiment     Sentiment
-  severity      Severity
-  category      FeedbackCategory
-  summary       String           @db.VarChar(1000)
-  problems      Json
-  provider      String           @db.VarChar(80)
-  model         String           @db.VarChar(120)
-  promptVersion String           @map("prompt_version") @db.VarChar(40)
-  inputTokens   Int?             @map("input_tokens")
-  outputTokens  Int?             @map("output_tokens")
-  createdAt     DateTime         @default(now()) @map("created_at")
-  feedback      FeedbackItem     @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
-  replies       SuggestedReply[]
+  id               String            @id @default(uuid()) @db.Uuid
+  feedbackId       String            @map("feedback_id") @db.Uuid
+  sentiment        Sentiment
+  severity         Severity
+  category         FeedbackCategory
+  summary          String            @db.VarChar(1000)
+  problems         Json
+  provider         String            @db.VarChar(80)
+  model            String            @db.VarChar(120)
+  promptVersion    String            @map("prompt_version") @db.VarChar(40)
+  inputTokens      Int?              @map("input_tokens")
+  outputTokens     Int?              @map("output_tokens")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  feedback         FeedbackItem      @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  replies          SuggestedReply[]
+  replyGenerations ReplyGeneration[]
 
   @@index([feedbackId, createdAt])
   @@index([severity, category])
   @@map("feedback_analyses")
 }
 
-model SuggestedReply {
-  id         String           @id @default(uuid()) @db.Uuid
-  feedbackId String           @map("feedback_id") @db.Uuid
-  analysisId String           @map("analysis_id") @db.Uuid
-  tone       String?          @db.VarChar(40)
-  text       String           @db.VarChar(5000)
-  status     ReplyStatus      @default(draft)
-  createdAt  DateTime         @default(now()) @map("created_at")
-  updatedAt  DateTime         @updatedAt @map("updated_at")
-  feedback   FeedbackItem     @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
-  analysis   FeedbackAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+model ReplyGeneration {
+  id            String    @id @default(uuid()) @db.Uuid
+  feedbackId    String    @map("feedback_id") @db.Uuid
+  analysisId    String    @map("analysis_id") @db.Uuid
+  provider      String    @db.VarChar(80)
+  model         String    @db.VarChar(120)
+  promptVersion String    @map("prompt_version") @db.VarChar(40)
+  inputTokens   Int?      @map("input_tokens")
+  outputTokens  Int?      @map("output_tokens")
+  supersededAt  DateTime? @map("superseded_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  feedback FeedbackItem     @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  analysis FeedbackAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  replies  SuggestedReply[]
 
   @@index([feedbackId, createdAt])
+  @@index([feedbackId, supersededAt])
+  @@map("reply_generations")
+}
+
+model SuggestedReply {
+  id           String  @id @default(uuid()) @db.Uuid
+  feedbackId   String  @map("feedback_id") @db.Uuid
+  analysisId   String  @map("analysis_id") @db.Uuid
+  generationId String? @map("generation_id") @db.Uuid
+  tone         String? @db.VarChar(40)
+
+  originalText String? @map("original_text") @db.VarChar(5000)
+  text         String  @db.VarChar(5000)
+
+  status    ReplyStatus @default(draft)
+  editedAt  DateTime?   @map("edited_at")
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+
+  feedback   FeedbackItem     @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  analysis   FeedbackAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  generation ReplyGeneration? @relation(fields: [generationId], references: [id], onDelete: SetNull)
+
+  @@index([feedbackId, createdAt])
+  @@index([generationId])
   @@map("suggested_replies")
 }
