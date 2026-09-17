@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CalendarDays, CircleUserRound, Globe2, Sparkles, Star } from "lucide-react";
 import { Link, useLocation, useParams } from "react-router-dom";
-import type { FeedbackStatus } from "@resolve-signal/contracts";
+import { AiUsageLimitErrorSchema, type FeedbackStatus } from "@resolve-signal/contracts";
 import { AnalyzeFeedbackButton } from "../../features/analyze-feedback/AnalyzeFeedbackButton";
 import { api } from "../../shared/api/api-client";
 import { feedbackSourceLabels, feedbackStatusLabels } from "../../shared/config/presentation";
 import { formatDate, formatRating, shortId } from "../../shared/lib/format";
+import { formatAiUsageLimitMessage } from "../../shared/lib/ai-usage-limit";
 import { Badge } from "../../shared/ui/badge";
 import { FeedbackState } from "../../shared/ui/feedback-state";
 import { PageHeader } from "../../shared/ui/page-header";
@@ -25,7 +26,8 @@ const statusOptions = [
 export function FeedbackDetailsPage() {
   const { id = "" } = useParams();
   const location = useLocation();
-  const routeState = location.state as { analysisFailed?: boolean } | null;
+  const routeState = location.state as { analysisFailed?: boolean; analysisLimit?: unknown } | null;
+  const analysisLimit = AiUsageLimitErrorSchema.safeParse(routeState?.analysisLimit);
   const client = useQueryClient();
   const query = useQuery({ queryKey: ["feedback", id], queryFn: () => api.feedback(id), enabled: Boolean(id) });
   const statusMutation = useMutation({
@@ -44,7 +46,7 @@ export function FeedbackDetailsPage() {
     <>
       <Link to="/feedback" className={styles.back}><ArrowLeft />К списку обращений</Link>
       <PageHeader eyebrow="Детали обращения" title={shortId(feedback.id, feedback.externalId)} description="Исходный текст клиента, структурированный AI-анализ и подготовка ответа." actions={<div className={styles.statusControl}><span>Статус</span><Select value={feedback.status} onChange={(value) => statusMutation.mutate(value as FeedbackStatus)} disabled={statusMutation.isPending} ariaLabel="Статус обращения" layout="full" dropdownAlign="end" options={statusOptions} /></div>} />
-      {routeState?.analysisFailed && !feedback.latestAnalysis ? <p className={styles.actionError} role="alert">Обращение сохранено, но автоматический AI-анализ не завершился. Повторите запуск в блоке AI-анализа.</p> : null}
+      {routeState?.analysisFailed && !feedback.latestAnalysis ? <p className={styles.actionError} role="alert">Обращение сохранено, но автоматический AI-анализ не завершился. {analysisLimit.success ? formatAiUsageLimitMessage(analysisLimit.data) : "Повторите запуск в блоке AI-анализа."}</p> : null}
       {statusMutation.isError ? <p className={styles.actionError} role="alert">Не удалось обновить статус. Предыдущее значение сохранено.</p> : null}
       <div className={styles.heroGrid}>
         <section className={styles.original}>

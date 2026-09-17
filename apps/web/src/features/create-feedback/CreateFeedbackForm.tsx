@@ -4,10 +4,11 @@ import { ArrowRight, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
-import { CreateFeedbackSchema, feedbackSources, type CreateFeedbackInput, type FeedbackSource } from "@resolve-signal/contracts";
+import { CreateFeedbackSchema, feedbackSources, type AiUsageLimitError, type CreateFeedbackInput, type FeedbackSource } from "@resolve-signal/contracts";
 import type { z } from "zod";
 import { api } from "../../shared/api/api-client";
 import { feedbackSourceLabels } from "../../shared/config/presentation";
+import { getAiUsageLimit } from "../../shared/lib/ai-usage-limit";
 import { Button } from "../../shared/ui/button";
 import { Checkbox } from "../../shared/ui/checkbox";
 import { Select } from "../../shared/ui/select";
@@ -49,20 +50,23 @@ export function CreateFeedbackForm() {
     mutationFn: async (input: CreateFeedbackInput) => {
       const created = await api.createFeedback(input);
       let analysisFailed = false;
+      let analysisLimit: AiUsageLimitError | undefined;
       if (analyzeAfterCreate) {
         try {
           await api.analyze(created.id);
-        } catch {
+        } catch (error) {
           analysisFailed = true;
+          analysisLimit = getAiUsageLimit(error);
         }
       }
-      return { created, analysisFailed };
+      return { created, analysisFailed, analysisLimit };
     },
-    onSuccess: async ({ created, analysisFailed }) => {
+    retry: false,
+    onSuccess: async ({ created, analysisFailed, analysisLimit }) => {
       await queryClient.invalidateQueries({ queryKey: ["feedback"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       navigate(`/feedback/${created.id}`, {
-        state: analysisFailed ? { analysisFailed: true } : undefined,
+        state: analysisFailed ? { analysisFailed: true, analysisLimit } : undefined,
       });
     },
   });
@@ -77,7 +81,9 @@ export function CreateFeedbackForm() {
         <label className={`${styles.field} ${styles.full}`}><span>Текст обращения</span><textarea {...form.register("text")} rows={7} placeholder="Введите или вставьте текст обращения…" aria-invalid={Boolean(form.formState.errors.text)} aria-describedby="feedback-text-help" /><div id="feedback-text-help" className={styles.fieldMeta}>{form.formState.errors.text ? <em>{validationMessages.text}</em> : <small>От 5 до 5 000 символов. Используйте только необходимые персональные данные.</small>}<span>{form.watch("text")?.length ?? 0}/5000</span></div></label>
       </div>
       <div className={styles.aiOption}><div className={styles.aiIcon}><Sparkles aria-hidden="true" /></div><Checkbox checked={analyzeAfterCreate} onChange={setAnalyzeAfterCreate} description="Запускает детерминированный AI-анализ и сохраняет структурированный результат.">Запустить AI-анализ после создания</Checkbox><span>AI-демо</span></div>
-      {mutation.isError ? <p className={styles.error} role="alert">Не удалось создать обращение. Проверьте работу API и базы данных, затем повторите попытку.</p> : null}
+      {mutation.isError ? <p className={styles.error} role="alert">{"status" in mutation.error && mutation.error.status === 400
+        ? "Проверьте поля формы. После удаления HTML текст обращения должен содержать от 5 до 5 000 символов."
+        : "Не удалось создать обращение. Проверьте работу API и базы данных, затем повторите попытку."}</p> : null}
       <footer><Button type="button" variant="secondary" onClick={() => navigate("/feedback")}>Отмена</Button><Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? "Создаём…" : <>Добавить обращение <ArrowRight /></>}</Button></footer>
     </form>
   );
