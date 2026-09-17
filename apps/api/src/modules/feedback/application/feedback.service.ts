@@ -5,6 +5,7 @@ import type {
   FeedbackStatus,
   UpdateReplyInput,
 } from "@resolve-signal/contracts";
+import { AiUsageLimiter } from "../../ai-usage/application/ai-usage-limiter.js";
 import { LLM_PROVIDER, type LLMProvider } from "../../ai/ports/llm-provider.js";
 import { FEEDBACK_REPOSITORY, type FeedbackRepository } from "../domain/feedback.repository.js";
 
@@ -13,6 +14,7 @@ export class FeedbackService {
   constructor(
     @Inject(FEEDBACK_REPOSITORY) private readonly repository: FeedbackRepository,
     @Inject(LLM_PROVIDER) private readonly llmProvider: LLMProvider,
+    @Inject(AiUsageLimiter) private readonly aiUsageLimiter: AiUsageLimiter,
   ) {}
 
   create(input: CreateFeedbackInput) {
@@ -29,8 +31,9 @@ export class FeedbackService {
     return feedback;
   }
 
-  async analyze(id: string) {
+  async analyze(id: string, clientIp: string) {
     const feedback = await this.get(id);
+    await this.aiUsageLimiter.reserve(clientIp);
     const result = await this.llmProvider.analyzeFeedback({
       id: feedback.id,
       source: feedback.source,
@@ -40,13 +43,25 @@ export class FeedbackService {
     return this.repository.saveAnalysis(id, result);
   }
 
-  async generateReplies(id: string, tones: string[]) {
+  async generateReplies(
+    id: string,
+    tones: string[],
+    clientIp: string,
+  ) {
     let feedback = await this.get(id);
     let analysis = feedback.latestAnalysis;
     if (!analysis) {
-      analysis = await this.analyze(id);
+      await this.aiUsageLimiter.reserve(clientIp);
+      const analysisResult = await this.llmProvider.analyzeFeedback({
+        id: feedback.id,
+        source: feedback.source,
+        rating: feedback.rating,
+        text: feedback.text,
+      });
+      analysis = await this.repository.saveAnalysis(id, analysisResult);
       feedback = await this.get(id);
     }
+    await this.aiUsageLimiter.reserve(clientIp);
     const generated = await this.llmProvider.generateReplies(
       {
         id: feedback.id,

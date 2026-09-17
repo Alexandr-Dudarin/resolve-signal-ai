@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Param, Patch, Post, Query } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Patch, Post, Query, Req, UseFilters } from "@nestjs/common";
 import { ApiBody, ApiOperation, ApiParam, ApiQuery, ApiTags } from "@nestjs/swagger";
 import {
   CreateFeedbackSchema,
@@ -8,10 +8,17 @@ import {
   UpdateFeedbackStatusSchema,
 } from "@resolve-signal/contracts";
 import { parseOrThrow } from "../../../common/validation/parse-or-throw.js";
+import { normalizeClientIp } from "../../../common/http/client-ip.js";
+import { AiUsageLimitExceptionFilter } from "../../ai-usage/api/ai-usage-limit-exception.filter.js";
 import { FeedbackService } from "../application/feedback.service.js";
+
+type ClientRequest = {
+  ip?: string;
+};
 
 @ApiTags("feedback")
 @Controller("api/v1/feedback")
+@UseFilters(AiUsageLimitExceptionFilter)
 export class FeedbackController {
   constructor(@Inject(FeedbackService) private readonly feedbackService: FeedbackService) {}
 
@@ -54,16 +61,27 @@ export class FeedbackController {
 
   @Post(":id/analyze")
   @ApiOperation({ summary: "Analyze feedback with the configured LLM provider" })
-  analyze(@Param("id") id: string) {
-    return this.feedbackService.analyze(parseOrThrow(EntityIdSchema, id));
+  analyze(@Param("id") id: string, @Req() request: ClientRequest) {
+    return this.feedbackService.analyze(
+      parseOrThrow(EntityIdSchema, id),
+      normalizeClientIp(request.ip ?? "unknown"),
+    );
   }
 
   @Post(":id/replies")
   @ApiOperation({ summary: "Generate suggested replies" })
   @ApiBody({ schema: { type: "object", properties: { tones: { type: "array", items: { type: "string" } } } } })
-  generateReplies(@Param("id") id: string, @Body() body: unknown) {
+  generateReplies(
+    @Param("id") id: string,
+    @Body() body: unknown,
+    @Req() request: ClientRequest,
+  ) {
     const input = parseOrThrow(GenerateRepliesSchema, body ?? {});
-    return this.feedbackService.generateReplies(parseOrThrow(EntityIdSchema, id), input.tones);
+    return this.feedbackService.generateReplies(
+      parseOrThrow(EntityIdSchema, id),
+      input.tones,
+      normalizeClientIp(request.ip ?? "unknown"),
+    );
   }
 
   @Patch(":id/status")

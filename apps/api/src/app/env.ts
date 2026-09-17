@@ -1,5 +1,12 @@
 import { z } from "zod";
 
+const booleanFromEnv = z.preprocess((value) => {
+  if (typeof value === "boolean") return value;
+  if (value === "true") return true;
+  if (value === "false") return false;
+  return value;
+}, z.boolean());
+
 const ApiEnvSchema = z
   .object({
     DATABASE_URL: z.string().min(1),
@@ -10,6 +17,12 @@ const ApiEnvSchema = z
 
     OPENAI_API_KEY: z.string().min(1).optional(),
     OPENAI_MODEL: z.string().min(1).optional(),
+
+    AI_USAGE_LIMITS_ENABLED: booleanFromEnv.default(true),
+    AI_LIMIT_PER_IP_MINUTE: z.coerce.number().int().min(1).default(5),
+    AI_LIMIT_PER_IP_DAY: z.coerce.number().int().min(1).default(20),
+    AI_LIMIT_GLOBAL_DAY: z.coerce.number().int().min(1).default(100),
+    TRUST_PROXY_HOPS: z.coerce.number().int().min(0).default(0),
   })
   .superRefine((env, ctx) => {
     if (env.AI_PROVIDER !== "openai") {

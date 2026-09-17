@@ -12,6 +12,7 @@ const ids = {
 };
 
 async function main() {
+  await prisma.aiUsageCounter.deleteMany();
   await prisma.suggestedReply.deleteMany();
   await prisma.feedbackAnalysis.deleteMany();
   await prisma.feedbackItem.deleteMany();

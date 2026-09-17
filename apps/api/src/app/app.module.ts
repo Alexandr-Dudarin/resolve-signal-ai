@@ -9,6 +9,13 @@ import {
   AI_RUNTIME_STATUS,
   createAiRuntimeStatus,
 } from "../modules/ai/application/ai-runtime-status.js";
+import {
+  AI_USAGE_CONFIG,
+  AiUsageLimiter,
+  createAiUsageConfig,
+} from "../modules/ai-usage/application/ai-usage-limiter.js";
+import { AI_USAGE_REPOSITORY } from "../modules/ai-usage/domain/ai-usage.repository.js";
+import { PrismaAiUsageRepository } from "../modules/ai-usage/infrastructure/prisma-ai-usage.repository.js";
 import { DashboardController } from "../modules/dashboard/api/dashboard.controller.js";
 import { DashboardService } from "../modules/dashboard/api/dashboard.service.js";
 import { FeedbackController } from "../modules/feedback/api/feedback.controller.js";
@@ -28,6 +35,11 @@ const aiRuntimeStatus = {
   useFactory: () => createAiRuntimeStatus(getApiEnv()),
 };
 
+const aiUsageConfig = {
+  provide: AI_USAGE_CONFIG,
+  useFactory: () => createAiUsageConfig(getApiEnv()),
+};
+
 @Module({
   controllers: [
     HealthController,
@@ -40,9 +52,16 @@ const aiRuntimeStatus = {
     PrismaService,
     FeedbackService,
     DashboardService,
+    AiUsageLimiter,
+    PrismaAiUsageRepository,
     { provide: FEEDBACK_REPOSITORY, useClass: PrismaFeedbackRepository },
+    {
+      provide: AI_USAGE_REPOSITORY,
+      useExisting: PrismaAiUsageRepository,
+    },
     llmProvider,
     aiRuntimeStatus,
+    aiUsageConfig,
   ],
 })
 export class AppModule {}

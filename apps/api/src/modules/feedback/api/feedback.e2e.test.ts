@@ -2,7 +2,7 @@ import "reflect-metadata";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import request from "supertest";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type {
   CreateFeedbackInput,
   FeedbackDetails,
@@ -13,6 +13,7 @@ import type {
 } from "@resolve-signal/contracts";
 import { MockProvider } from "../../ai/infrastructure/mock.provider.js";
 import { LLM_PROVIDER, type AnalysisResult } from "../../ai/ports/llm-provider.js";
+import { AiUsageLimiter } from "../../ai-usage/application/ai-usage-limiter.js";
 import { FeedbackService } from "../application/feedback.service.js";
 import { FEEDBACK_REPOSITORY, type FeedbackRepository } from "../domain/feedback.repository.js";
 import { HealthController } from "../../health/health.controller.js";
@@ -78,6 +79,7 @@ class MemoryFeedbackRepository implements FeedbackRepository {
 
 describe("feedback HTTP API", () => {
   let app: INestApplication;
+  const reserveAiUsage = vi.fn().mockResolvedValue(undefined);
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -86,6 +88,10 @@ describe("feedback HTTP API", () => {
         FeedbackService,
         { provide: FEEDBACK_REPOSITORY, useClass: MemoryFeedbackRepository },
         { provide: LLM_PROVIDER, useClass: MockProvider },
+        {
+          provide: AiUsageLimiter,
+          useValue: { reserve: reserveAiUsage },
+        },
       ],
     }).compile();
     app = moduleRef.createNestApplication();
@@ -113,7 +119,11 @@ describe("feedback HTTP API", () => {
   });
 
   it("rejects malformed route identifiers before repository access", async () => {
+    reserveAiUsage.mockClear();
+
     await request(app.getHttpServer()).get("/api/v1/feedback/not-a-uuid").expect(400);
     await request(app.getHttpServer()).post("/api/v1/feedback/not-a-uuid/analyze").expect(400);
+
+    expect(reserveAiUsage).not.toHaveBeenCalled();
   });
 });
