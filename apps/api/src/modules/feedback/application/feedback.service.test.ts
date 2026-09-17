@@ -1,4 +1,4 @@
-import { NotFoundException } from "@nestjs/common";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
 import type {
   FeedbackDetails,
   PersistedFeedbackAnalysis,
@@ -171,5 +171,42 @@ describe("FeedbackService AI usage reservation", () => {
     expect(limiter.reserve).toHaveBeenCalledTimes(1);
     expect(provider.generateReplies).not.toHaveBeenCalled();
     expect(repository.saveReplies).not.toHaveBeenCalled();
+  });
+
+  it("does not modify existing analysis or replies when generation is blocked", async () => {
+    vi.mocked(limiter.reserve).mockRejectedValue(new AiUsageLimitExceededError("ip_day", 600));
+    await expect(service.generateReplies(feedbackId, ["empathetic"], clientIp)).rejects.toMatchObject({ scope: "ip_day" });
+    expect(provider.generateReplies).not.toHaveBeenCalled();
+    expect(repository.saveAnalysis).not.toHaveBeenCalled();
+    expect(repository.saveReplies).not.toHaveBeenCalled();
+  });
+
+  it("keeps successful auto-analysis when the second reservation is rejected", async () => {
+    vi.mocked(repository.findById).mockResolvedValue(feedback(null));
+    vi.mocked(limiter.reserve).mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new AiUsageLimitExceededError("ip_minute", 30));
+    await expect(service.generateReplies(feedbackId, ["empathetic"], clientIp)).rejects.toMatchObject({ scope: "ip_minute" });
+    expect(limiter.reserve).toHaveBeenCalledTimes(2);
+    expect(provider.analyzeFeedback).toHaveBeenCalledTimes(1);
+    expect(repository.saveAnalysis).toHaveBeenCalledTimes(1);
+    expect(provider.generateReplies).not.toHaveBeenCalled();
+    expect(repository.saveReplies).not.toHaveBeenCalled();
+  });
+
+  it("normalizes legacy feedback before both LLM operations without backfilling", async () => {
+    vi.mocked(repository.findById).mockResolvedValue({ ...feedback(null), text: '<p>Доставка задержалась.</p><script>alert(1)</script>' });
+    await service.generateReplies(feedbackId, ["empathetic"], clientIp);
+    expect(provider.analyzeFeedback).toHaveBeenCalledWith(expect.objectContaining({ text: "Доставка задержалась." }));
+    expect(provider.generateReplies).toHaveBeenCalledWith(expect.objectContaining({ text: "Доставка задержалась." }), analysis, ["empathetic"]);
+    expect(repository.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects legacy feedback empty after normalization before reserving quota", async () => {
+    vi.mocked(repository.findById).mockResolvedValue({ ...feedback(null), text: '<script>alert(1)</script>' });
+    await expect(service.analyze(feedbackId, clientIp)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.generateReplies(feedbackId, ["empathetic"], clientIp)).rejects.toBeInstanceOf(BadRequestException);
+    expect(limiter.reserve).not.toHaveBeenCalled();
+    expect(provider.analyzeFeedback).not.toHaveBeenCalled();
+    expect(provider.generateReplies).not.toHaveBeenCalled();
   });
 });

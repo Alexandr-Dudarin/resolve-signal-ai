@@ -1,4 +1,5 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { CreateFeedbackSchema } from "@resolve-signal/contracts";
 import type {
   CreateFeedbackInput,
   FeedbackListQuery,
@@ -6,6 +7,8 @@ import type {
   UpdateReplyInput,
 } from "@resolve-signal/contracts";
 import { AiUsageLimiter } from "../../ai-usage/application/ai-usage-limiter.js";
+import { normalizeFeedbackText } from "../../../common/security/feedback-text.js";
+import { parseOrThrow } from "../../../common/validation/parse-or-throw.js";
 import { LLM_PROVIDER, type LLMProvider } from "../../ai/ports/llm-provider.js";
 import { FEEDBACK_REPOSITORY, type FeedbackRepository } from "../domain/feedback.repository.js";
 
@@ -33,12 +36,13 @@ export class FeedbackService {
 
   async analyze(id: string, clientIp: string) {
     const feedback = await this.get(id);
+    const text = parseOrThrow(CreateFeedbackSchema.shape.text, normalizeFeedbackText(feedback.text));
     await this.aiUsageLimiter.reserve(clientIp);
     const result = await this.llmProvider.analyzeFeedback({
       id: feedback.id,
       source: feedback.source,
       rating: feedback.rating,
-      text: feedback.text,
+      text,
     });
     return this.repository.saveAnalysis(id, result);
   }
@@ -49,6 +53,7 @@ export class FeedbackService {
     clientIp: string,
   ) {
     let feedback = await this.get(id);
+    let text = parseOrThrow(CreateFeedbackSchema.shape.text, normalizeFeedbackText(feedback.text));
     let analysis = feedback.latestAnalysis;
     if (!analysis) {
       await this.aiUsageLimiter.reserve(clientIp);
@@ -56,10 +61,11 @@ export class FeedbackService {
         id: feedback.id,
         source: feedback.source,
         rating: feedback.rating,
-        text: feedback.text,
+        text,
       });
       analysis = await this.repository.saveAnalysis(id, analysisResult);
       feedback = await this.get(id);
+      text = parseOrThrow(CreateFeedbackSchema.shape.text, normalizeFeedbackText(feedback.text));
     }
     await this.aiUsageLimiter.reserve(clientIp);
     const generated = await this.llmProvider.generateReplies(
@@ -67,7 +73,7 @@ export class FeedbackService {
         id: feedback.id,
         source: feedback.source,
         rating: feedback.rating,
-        text: feedback.text,
+        text,
         authorName: feedback.authorName,
       },
       analysis,
