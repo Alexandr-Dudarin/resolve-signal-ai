@@ -54,6 +54,12 @@ enum ReplyStatus {
   rejected
 }
 
+enum AiUsageScope {
+  ip_minute
+  ip_day
+  global_day
+}
+
 model FeedbackItem {
   id               String             @id @default(uuid()) @db.Uuid
   source           FeedbackSource
@@ -140,4 +146,18 @@ model SuggestedReply {
   @@index([feedbackId, createdAt])
   @@index([generationId])
   @@map("suggested_replies")
+}
+
+model AiUsageCounter {
+  id          String       @id @default(uuid()) @db.Uuid
+  scope       AiUsageScope
+  subjectKey  String       @map("subject_key") @db.VarChar(64)
+  windowStart DateTime     @map("window_start")
+  count       Int          @default(0)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  @@unique([scope, subjectKey, windowStart])
+  @@index([windowStart])
+  @@map("ai_usage_counters")
 }

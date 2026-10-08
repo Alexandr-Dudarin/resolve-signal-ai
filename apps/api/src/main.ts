@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import dotenv from "dotenv";
 import { NestFactory } from "@nestjs/core";
+import type { NestExpressApplication } from "@nestjs/platform-express";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "./app/app.module.js";
 import { getApiEnv } from "./app/env.js";
@@ -9,7 +10,8 @@ dotenv.config({ path: new URL("../../../.env", import.meta.url) });
 
 async function bootstrap() {
   const env = getApiEnv();
-  const app = await NestFactory.create(AppModule, { cors: false });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { cors: false });
+  app.set("trust proxy", env.TRUST_PROXY_HOPS);
   app.enableCors({ origin: env.CORS_ORIGIN });
   app.enableShutdownHooks();
 

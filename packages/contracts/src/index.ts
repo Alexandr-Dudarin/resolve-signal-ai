@@ -27,6 +27,11 @@ export const feedbackCategories = [
   "other",
 ] as const;
 export const replyStatuses = ["draft", "approved", "rejected"] as const;
+export const aiUsageLimitScopes = [
+  "ip_minute",
+  "ip_day",
+  "global_day",
+] as const;
 
 export const FeedbackSourceSchema = z.enum(feedbackSources);
 export const FeedbackStatusSchema = z.enum(feedbackStatuses);
@@ -34,6 +39,7 @@ export const SentimentSchema = z.enum(sentiments);
 export const SeveritySchema = z.enum(severities);
 export const FeedbackCategorySchema = z.enum(feedbackCategories);
 export const ReplyStatusSchema = z.enum(replyStatuses);
+export const AiUsageLimitScopeSchema = z.enum(aiUsageLimitScopes);
 
 export const EntityIdSchema = z.string().uuid();
 
@@ -170,6 +176,12 @@ export const AiRuntimeStatusSchema = z.object({
   mode: z.enum(["demo", "live"]),
 });
 
+export const AiUsageLimitErrorSchema = z.object({
+  code: z.literal("AI_USAGE_LIMIT_EXCEEDED"),
+  scope: AiUsageLimitScopeSchema,
+  retryAfterSeconds: z.number().int().nonnegative(),
+});
+
 export type FeedbackSource = z.infer<typeof FeedbackSourceSchema>;
 export type FeedbackStatus = z.infer<typeof FeedbackStatusSchema>;
 export type Sentiment = z.infer<typeof SentimentSchema>;
@@ -190,3 +202,5 @@ export type GenerateRepliesInput = z.infer<typeof GenerateRepliesSchema>;
 export type UpdateReplyInput = z.infer<typeof UpdateReplySchema>;
 export type DashboardSummary = z.infer<typeof DashboardSummarySchema>;
 export type AiRuntimeStatus = z.infer<typeof AiRuntimeStatusSchema>;
+export type AiUsageLimitScope = z.infer<typeof AiUsageLimitScopeSchema>;
+export type AiUsageLimitError = z.infer<typeof AiUsageLimitErrorSchema>;

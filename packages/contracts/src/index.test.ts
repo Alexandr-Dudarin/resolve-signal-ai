@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  AiUsageLimitErrorSchema,
   CreateFeedbackSchema,
   EntityIdSchema,
   FeedbackAnalysisSchema,
@@ -114,5 +115,27 @@ describe("shared contracts", () => {
     });
 
     expect(details.currentReplyGeneration).toEqual(generation);
+  });
+
+  it("validates structured AI usage limit errors", () => {
+    expect(
+      AiUsageLimitErrorSchema.parse({
+        code: "AI_USAGE_LIMIT_EXCEEDED",
+        scope: "ip_minute",
+        retryAfterSeconds: 42,
+      }),
+    ).toEqual({
+      code: "AI_USAGE_LIMIT_EXCEEDED",
+      scope: "ip_minute",
+      retryAfterSeconds: 42,
+    });
+
+    expect(() =>
+      AiUsageLimitErrorSchema.parse({
+        code: "AI_USAGE_LIMIT_EXCEEDED",
+        scope: "unknown",
+        retryAfterSeconds: -1,
+      }),
+    ).toThrow();
   });
 });

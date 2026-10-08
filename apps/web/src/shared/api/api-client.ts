@@ -1,5 +1,6 @@
 import {
   AiRuntimeStatusSchema,
+  AiUsageLimitErrorSchema,
   DashboardSummarySchema,
   FeedbackDetailsSchema,
   FeedbackListResponseSchema,
@@ -10,12 +11,13 @@ import {
   type FeedbackStatus,
   type GenerateRepliesInput,
   type UpdateReplyInput,
+  type AiUsageLimitError,
 } from "@resolve-signal/contracts";
 import { z } from "zod";
 import { webEnv } from "../config/env";
 
 export class ApiError extends Error {
-  constructor(message: string, readonly status: number) {
+  constructor(message: string, readonly status: number, readonly aiUsageLimit?: AiUsageLimitError) {
     super(message);
   }
 }
@@ -26,8 +28,14 @@ async function request<T>(path: string, schema: z.ZodType<T>, init?: RequestInit
     headers: { "Content-Type": "application/json", ...init?.headers },
   });
   if (!response.ok) {
-    const payload = (await response.json().catch(() => null)) as { message?: string } | null;
-    throw new ApiError(payload?.message ?? "Не удалось выполнить запрос.", response.status);
+    const payload: unknown = await response.json().catch(() => null);
+    const limit = response.status === 429 ? AiUsageLimitErrorSchema.safeParse(payload) : null;
+    const message = z.object({ message: z.string() }).safeParse(payload);
+    throw new ApiError(
+      message.success ? message.data.message : "Не удалось выполнить запрос.",
+      response.status,
+      limit?.success ? limit.data : undefined,
+    );
   }
   return schema.parse(await response.json());
 }
