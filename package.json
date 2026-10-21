@@ -13,15 +13,18 @@
     "dev:api": "pnpm contracts:build && pnpm --filter @resolve-signal/api dev",
     "dev:web": "pnpm contracts:build && pnpm --filter @resolve-signal/web dev",
     "lint": "eslint .",
-    "typecheck": "pnpm contracts:build && pnpm --filter @resolve-signal/contracts typecheck && pnpm --filter @resolve-signal/api typecheck && pnpm --filter @resolve-signal/web typecheck",
-    "test": "pnpm contracts:build && pnpm --filter @resolve-signal/contracts test && pnpm --filter @resolve-signal/api test && pnpm --filter @resolve-signal/web test",
+    "typecheck": "pnpm contracts:build && pnpm --filter @resolve-signal/contracts typecheck && pnpm --filter @resolve-signal/api typecheck && pnpm --filter @resolve-signal/web typecheck && tsc -p tsconfig.ops.json",
+    "test": "pnpm contracts:build && pnpm --filter @resolve-signal/contracts test && pnpm --filter @resolve-signal/api test && pnpm --filter @resolve-signal/web test && pnpm test:ops",
     "db:start": "docker compose up -d postgres",
     "db:stop": "docker compose down",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
     "db:seed": "prisma db seed",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "test:ops": "vitest run --config vitest.ops.config.ts",
+    "db:demo:migrate": "node --env-file-if-exists=.env --import tsx prisma/public-demo-command.ts migrate",
+    "db:demo:init": "node --env-file-if-exists=.env --import tsx prisma/public-demo-command.ts init"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
@@ -33,6 +36,7 @@
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.4",
-    "vitest": "^4.0.14"
+    "vitest": "^4.0.14",
+    "@types/node": "^24.10.1"
   }
 }
