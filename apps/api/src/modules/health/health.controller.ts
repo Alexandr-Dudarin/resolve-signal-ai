@@ -1,3 +1,4 @@
+import { PublicDemoEndpoint } from "../demo-access/demo-access.config.js";
 import { Controller, Get } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 
@@ -5,6 +6,7 @@ import { ApiOperation, ApiTags } from "@nestjs/swagger";
 @Controller("health")
 export class HealthController {
   @Get()
+  @PublicDemoEndpoint()
   @ApiOperation({ summary: "API health check" })
   check() {
     return { status: "ok", service: "resolve-signal-api" };

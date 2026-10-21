@@ -204,3 +204,18 @@ export type DashboardSummary = z.infer<typeof DashboardSummarySchema>;
 export type AiRuntimeStatus = z.infer<typeof AiRuntimeStatusSchema>;
 export type AiUsageLimitScope = z.infer<typeof AiUsageLimitScopeSchema>;
 export type AiUsageLimitError = z.infer<typeof AiUsageLimitErrorSchema>;
+
+// Shared demo access adds no user/tenant identity to the business model.
+export const DemoSessionSchema = z.object({
+  enabled: z.boolean(),
+  authenticated: z.boolean(),
+  expiresAt: z.string().datetime().nullable(),
+});
+export const DemoLoginSchema = z.object({ code: z.string().min(1).max(128) });
+export const DemoRateLimitErrorSchema = z.object({
+  code: z.literal("DEMO_RATE_LIMIT_EXCEEDED"),
+  scope: z.enum(["login_ip", "login_global", "write_ip", "write_global", "create_global", "sessions"]),
+  retryAfterSeconds: z.number().int().nonnegative(),
+});
+export type DemoSession = z.infer<typeof DemoSessionSchema>;
+export type DemoRateLimitError = z.infer<typeof DemoRateLimitErrorSchema>;

@@ -2,29 +2,25 @@ import "reflect-metadata";
 import dotenv from "dotenv";
 import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
-import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "./app/app.module.js";
 import { getApiEnv } from "./app/env.js";
+import { configureHttp } from "./app/configure-http.js";
 
-dotenv.config({ path: new URL("../../../.env", import.meta.url) });
+dotenv.config({ path: new URL("../../../.env", import.meta.url), quiet: true });
 
 async function bootstrap() {
   const env = getApiEnv();
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, { cors: false });
-  app.set("trust proxy", env.TRUST_PROXY_HOPS);
-  app.enableCors({ origin: env.CORS_ORIGIN });
+  // Bootstrap errors can contain DB URLs / upstream details: report no raw exceptions.
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    cors: false, bodyParser: false, abortOnError: false, logger: false,
+  });
+  configureHttp(app, env);
   app.enableShutdownHooks();
-
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle("ResolveSignal AI API")
-    .setDescription("Versioned feedback operations API with a configurable AI provider.")
-    .setVersion("1.0")
-    .build();
-  SwaggerModule.setup("api/docs", app, SwaggerModule.createDocument(app, swaggerConfig));
-
   await app.listen(env.PORT, "0.0.0.0");
-  console.log(`ResolveSignal API listening on http://localhost:${env.PORT}`);
-  console.log(`Swagger available at http://localhost:${env.PORT}/api/docs`);
+  console.log(`ResolveSignal API listening on port ${env.PORT}`);
 }
 
-void bootstrap();
+bootstrap().catch(() => {
+  console.error("API startup failed. Check server environment and database connectivity.");
+  process.exitCode = 1;
+});

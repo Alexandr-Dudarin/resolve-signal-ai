@@ -100,3 +100,40 @@ describe("API environment", () => {
     }
   });
 });
+
+const production = {
+  ...baseEnv, NODE_ENV: "production", CORS_ORIGIN: "https://demo.example",
+  DATABASE_URL: "postgresql://user:password@db.example/demo?sslmode=require&sslaccept=strict",
+  OPENAI_API_KEY: "test-key", OPENAI_MODEL: "test-model",
+  DEMO_ACCESS_CODE: "TestOnlyCode_0123456789_abcdef",
+  DEMO_SESSION_SECRET: "TestOnlySecret_0123456789_ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+};
+
+describe("production fails closed", () => {
+  it("defaults to gated live OpenAI with bounded sessions", () => {
+    const config = getApiEnv(production);
+    expect(config.DEMO_ACCESS_ENABLED).toBe(true);
+    expect(config.AI_PROVIDER).toBe("openai");
+    expect(config.DEMO_SESSION_TTL_SECONDS).toBe(43200);
+  });
+  it.each([
+    ["DEMO_ACCESS_ENABLED", "false"], ["DEMO_ACCESS_CODE", "short"], ["DEMO_SESSION_SECRET", "x".repeat(64)],
+    ["DEMO_ACCESS_CODE", ""], ["DEMO_SESSION_SECRET", ""], ["AI_PROVIDER", "mock"],
+    ["AI_USAGE_LIMITS_ENABLED", "false"], ["CORS_ORIGIN", "http://demo.example"],
+    ["CORS_ORIGIN", "https://demo.example/path"], ["CORS_ORIGIN", "not a URL"],
+    ["DATABASE_URL", "postgresql://user:password@db.example/demo"],
+    ["DATABASE_URL", "postgresql://user:password@db.example/demo?sslmode=require&sslaccept=accept_invalid_certs"],
+    ["DATABASE_URL", production.DATABASE_URL + "&sslmode=disable"],
+    ["DATABASE_URL", production.DATABASE_URL + "&host=other"],
+    ["OPENAI_MODEL", ""], ["OPENAI_API_KEY", ""], ["DEMO_SESSION_TTL_SECONDS", "999999"],
+  ])("rejects unsafe %s without leaking secret values", (key, value) => {
+    expect(() => getApiEnv({ ...production, [key]: value })).toThrow();
+    try { getApiEnv({ ...production, [key]: value }); } catch (error) {
+      expect(String(error)).not.toContain(production.DEMO_SESSION_SECRET);
+      expect(String(error)).not.toContain("user:password");
+    }
+  });
+  it("rejects reused access/signing secrets", () => {
+    expect(() => getApiEnv({ ...production, DEMO_ACCESS_CODE: production.DEMO_SESSION_SECRET })).toThrow("DEMO_SESSION_SECRET");
+  });
+});
