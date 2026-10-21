@@ -4,11 +4,12 @@ import { FeedbackCreatePage } from "../../pages/feedback-create/FeedbackCreatePa
 import { FeedbackDetailsPage } from "../../pages/feedback-details/FeedbackDetailsPage";
 import { FeedbackListPage } from "../../pages/feedback-list/FeedbackListPage";
 import { NotFoundPage } from "../../pages/not-found/NotFoundPage";
+import { DemoAccessGate } from "../../features/demo-access/DemoAccessGate";
 import { RootLayout } from "./RootLayout";
 
 export const router = createBrowserRouter([
   {
-    element: <RootLayout />,
+    element: <DemoAccessGate><RootLayout /></DemoAccessGate>,
     children: [
       { path: "/", element: <DashboardPage /> },
       { path: "/feedback", element: <FeedbackListPage /> },

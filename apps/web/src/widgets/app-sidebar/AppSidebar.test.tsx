@@ -54,8 +54,8 @@ describe("AppSidebar AI status", () => {
 
     const { container } = renderSidebar();
 
-    expect(await screen.findByText("Live AI работает")).toBeInTheDocument();
-    expect(screen.getByText("OpenAI подключён")).toBeInTheDocument();
+    expect(await screen.findByText("Режим OpenAI")).toBeInTheDocument();
+    expect(screen.getByText("Запросы отправляются в OpenAI")).toBeInTheDocument();
     expect(screen.getByText("gpt-5.6-luna")).toBeInTheDocument();
     expect(container).not.toHaveTextContent("OPENAI_API_KEY");
   });

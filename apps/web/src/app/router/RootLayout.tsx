@@ -1,14 +1,17 @@
-import { Bell, CircleUserRound } from "lucide-react";
+import { CircleUserRound } from "lucide-react";
 import { Outlet } from "react-router-dom";
 import { useAiRuntimeStatus } from "../../shared/api/use-ai-runtime-status";
 import { AppSidebar } from "../../widgets/app-sidebar/AppSidebar";
+import { useDemoAccess } from "../../features/demo-access/DemoAccessGate";
+import { Button } from "../../shared/ui/button";
 import styles from "./RootLayout.module.css";
 
 export function RootLayout() {
+  const access = useDemoAccess();
   const runtimeStatus = useAiRuntimeStatus();
   const workspaceLabel =
     runtimeStatus.data?.mode === "live"
-      ? "Live-пространство"
+      ? "Демо · OpenAI"
       : runtimeStatus.data?.mode === "demo"
         ? "Демо-пространство"
         : "Рабочее пространство";
@@ -20,11 +23,14 @@ export function RootLayout() {
         <header className={styles.topbar}>
           <div className={styles.demo}><span />{workspaceLabel}</div>
           <div className={styles.profile}>
-            <button aria-label="Уведомления"><Bell /></button>
+
             <CircleUserRound aria-hidden="true" />
-            <span><strong>Алексей Морозов</strong><small>Операции</small></span>
+            <span><strong>Гость</strong><small>Общее демо</small></span>
+            {access.enabled ? <Button variant="secondary" size="sm" disabled={access.busy} onClick={() => void access.logout()}>{access.busy ? "Выходим…" : "Выйти"}</Button> : null}
           </div>
         </header>
+        <div className={styles.notice}>Общее демо: обращения и изменения видны всем участникам. Не вводите персональные или конфиденциальные данные.</div>
+        {access.error ? <p className={styles.notice} role="alert">{access.error}</p> : null}
         <main className={styles.main}><Outlet /></main>
       </div>
     </div>

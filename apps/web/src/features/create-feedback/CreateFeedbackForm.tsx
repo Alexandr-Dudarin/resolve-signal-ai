@@ -8,6 +8,7 @@ import { CreateFeedbackSchema, feedbackSources, type AiUsageLimitError, type Cre
 import type { z } from "zod";
 import { api } from "../../shared/api/api-client";
 import { feedbackSourceLabels } from "../../shared/config/presentation";
+import { demoLimitMessage } from "../../shared/lib/demo-limit";
 import { getAiUsageLimit } from "../../shared/lib/ai-usage-limit";
 import { Button } from "../../shared/ui/button";
 import { Checkbox } from "../../shared/ui/checkbox";
@@ -76,14 +77,14 @@ export function CreateFeedbackForm() {
       <div className={styles.grid}>
         <label className={styles.field}><span>Источник</span><Controller control={form.control} name="source" render={({ field }) => <Select value={field.value ?? "manual"} onChange={(value) => field.onChange(value as FeedbackSource)} ariaLabel="Источник обращения" layout="form" dropdownWidth="trigger" options={sourceOptions} />} /></label>
         <label className={styles.field}><span>Оценка <small>Необязательно</small></span><Controller control={form.control} name="rating" render={({ field }) => <Select value={field.value ? String(field.value) : ""} onChange={(value) => field.onChange(value ? Number(value) : undefined)} ariaLabel="Оценка клиента" layout="form" dropdownWidth="trigger" options={ratingOptions} />} /></label>
-        <label className={styles.field}><span>Имя клиента <small>Необязательно</small></span><input {...form.register("authorName")} placeholder="Например, София Волкова" aria-invalid={Boolean(form.formState.errors.authorName)} aria-describedby={form.formState.errors.authorName ? "author-name-error" : undefined} />{form.formState.errors.authorName ? <em id="author-name-error" className={styles.validationError}>{validationMessages.authorName}</em> : null}</label>
+        <label className={styles.field}><span>Имя клиента <small>Необязательно</small></span><input {...form.register("authorName")} placeholder="Например, Демо-клиент" aria-invalid={Boolean(form.formState.errors.authorName)} aria-describedby={form.formState.errors.authorName ? "author-name-error" : undefined} />{form.formState.errors.authorName ? <em id="author-name-error" className={styles.validationError}>{validationMessages.authorName}</em> : null}</label>
         <label className={styles.field}><span>Идентификатор клиента <small>Необязательно</small></span><input {...form.register("customerRef")} placeholder="Например, CUS-184" aria-invalid={Boolean(form.formState.errors.customerRef)} aria-describedby={form.formState.errors.customerRef ? "customer-ref-error" : undefined} />{form.formState.errors.customerRef ? <em id="customer-ref-error" className={styles.validationError}>{validationMessages.customerRef}</em> : null}</label>
-        <label className={`${styles.field} ${styles.full}`}><span>Текст обращения</span><textarea {...form.register("text")} rows={7} placeholder="Введите или вставьте текст обращения…" aria-invalid={Boolean(form.formState.errors.text)} aria-describedby="feedback-text-help" /><div id="feedback-text-help" className={styles.fieldMeta}>{form.formState.errors.text ? <em>{validationMessages.text}</em> : <small>От 5 до 5 000 символов. Используйте только необходимые персональные данные.</small>}<span>{form.watch("text")?.length ?? 0}/5000</span></div></label>
+        <label className={`${styles.field} ${styles.full}`}><span>Текст обращения</span><textarea {...form.register("text")} rows={7} placeholder="Введите или вставьте текст обращения…" aria-invalid={Boolean(form.formState.errors.text)} aria-describedby="feedback-text-help" /><div id="feedback-text-help" className={styles.fieldMeta}>{form.formState.errors.text ? <em>{validationMessages.text}</em> : <small>От 5 до 5 000 символов. Используйте только вымышленные данные.</small>}<span>{form.watch("text")?.length ?? 0}/5000</span></div></label>
       </div>
-      <div className={styles.aiOption}><div className={styles.aiIcon}><Sparkles aria-hidden="true" /></div><Checkbox checked={analyzeAfterCreate} onChange={setAnalyzeAfterCreate} description="Запускает детерминированный AI-анализ и сохраняет структурированный результат.">Запустить AI-анализ после создания</Checkbox><span>AI-демо</span></div>
-      {mutation.isError ? <p className={styles.error} role="alert">{"status" in mutation.error && mutation.error.status === 400
+      <div className={styles.aiOption}><div className={styles.aiIcon}><Sparkles aria-hidden="true" /></div><Checkbox checked={analyzeAfterCreate} onChange={setAnalyzeAfterCreate} description="Запускает AI-анализ в выбранном сервером режиме и сохраняет результат.">Запустить AI-анализ после создания</Checkbox><span>AI-анализ</span></div>
+      {mutation.isError ? <p className={styles.error} role="alert">{demoLimitMessage(mutation.error) ?? ("status" in mutation.error && mutation.error.status === 400
         ? "Проверьте поля формы. После удаления HTML текст обращения должен содержать от 5 до 5 000 символов."
-        : "Не удалось создать обращение. Проверьте работу API и базы данных, затем повторите попытку."}</p> : null}
+        : "Не удалось создать обращение. Проверьте работу API и базы данных, затем повторите попытку.")}</p> : null}
       <footer><Button type="button" variant="secondary" onClick={() => navigate("/feedback")}>Отмена</Button><Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? "Создаём…" : <>Добавить обращение <ArrowRight /></>}</Button></footer>
     </form>
   );
