@@ -1,0 +1,53 @@
+services:
+  - type: web
+    name: resolve-signal-demo-api
+    runtime: node
+    plan: free
+    numInstances: 1
+    autoDeployTrigger: off
+    buildCommand: corepack pnpm install --frozen-lockfile --prod=false && corepack pnpm contracts:build && corepack pnpm --filter @resolve-signal/api build
+    startCommand: node apps/api/dist/main.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 24.19.0
+      - key: NODE_ENV
+        value: production
+      - key: AI_PROVIDER
+        value: openai
+      - key: OPENAI_MODEL
+        value: gpt-5.6-luna
+      - key: AI_USAGE_LIMITS_ENABLED
+        value: "true"
+      - key: AI_LIMIT_PER_IP_MINUTE
+        value: "3"
+      - key: AI_LIMIT_PER_IP_DAY
+        value: "10"
+      - key: AI_LIMIT_GLOBAL_DAY
+        value: "30"
+      - key: TRUST_PROXY_HOPS
+        value: "0"
+      - key: DEMO_ACCESS_ENABLED
+        value: "true"
+      - key: DEMO_SESSION_TTL_SECONDS
+        value: "43200"
+      - key: DEMO_LOGIN_PER_IP
+        value: "5"
+      - key: DEMO_LOGIN_GLOBAL
+        value: "30"
+      - key: DEMO_WRITE_PER_IP_MINUTE
+        value: "20"
+      - key: DEMO_WRITE_GLOBAL_MINUTE
+        value: "60"
+      - key: DEMO_CREATE_GLOBAL_DAY
+        value: "50"
+      - key: CORS_ORIGIN
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: DEMO_ACCESS_CODE
+        sync: false
+      - key: DEMO_SESSION_SECRET
+        sync: false
