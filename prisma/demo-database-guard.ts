@@ -19,7 +19,7 @@ export function requirePublicDemoDatabase(env: NodeJS.ProcessEnv, action: "init"
 }
 
 export function requireLocalSeedDatabase(env: NodeJS.ProcessEnv) {
-  if (env.NODE_ENV === "production" || ![undefined, "false"].includes(env.DEMO_ACCESS_ENABLED)) throw new Error("Destructive seed is disabled for protected/public environments");
+  if (env.NODE_ENV === "production" || env.DEMO_ACCESS_MODE === "guest" || ![undefined, "false"].includes(env.DEMO_ACCESS_ENABLED)) throw new Error("Destructive seed is disabled for protected/public environments");
   let url: URL;
   try { url = new URL(env.DATABASE_URL ?? ""); } catch { throw new Error("A local DATABASE_URL is required for destructive seed"); }
   if (!["postgres:", "postgresql:"].includes(url.protocol) || !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname) || url.searchParams.has("host") || url.searchParams.has("options")) {

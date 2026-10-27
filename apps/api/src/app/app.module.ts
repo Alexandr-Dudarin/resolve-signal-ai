@@ -2,7 +2,7 @@ import { DemoAccessModule } from "../modules/demo-access/demo-access.module.js";
 import { Module } from "@nestjs/common";
 
 import { getApiEnv } from "./env.js";
-import { PrismaService } from "./prisma.service.js";
+import { PrismaModule } from "./prisma.module.js";
 import { createLlmProvider } from "../modules/ai/infrastructure/llm-provider.factory.js";
 import { LLM_PROVIDER } from "../modules/ai/ports/llm-provider.js";
 import { AiRuntimeController } from "../modules/ai/api/ai-runtime.controller.js";
@@ -42,7 +42,7 @@ const aiUsageConfig = {
 };
 
 @Module({
-  imports: [DemoAccessModule],
+  imports: [PrismaModule, DemoAccessModule],
   controllers: [
     HealthController,
     AiRuntimeController,
@@ -51,7 +51,6 @@ const aiUsageConfig = {
     RepliesController,
   ],
   providers: [
-    PrismaService,
     FeedbackService,
     DashboardService,
     AiUsageLimiter,

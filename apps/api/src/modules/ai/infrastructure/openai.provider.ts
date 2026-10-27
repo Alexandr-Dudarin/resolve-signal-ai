@@ -40,9 +40,11 @@ export class OpenAIProvider implements LLMProvider {
   constructor(
     apiKey: string,
     private readonly model: string,
+    private readonly maxOutputTokens = 2000,
+    timeoutMs = 30000,
   ) {
     // Одна reservation — одна попытка. Скрытые повторы SDK не обходят квоту.
-    this.client = new OpenAI({ apiKey, maxRetries: 0 });
+    this.client = new OpenAI({ apiKey, maxRetries: 0, timeout: timeoutMs });
   }
 
   async analyzeFeedback(
@@ -51,6 +53,7 @@ export class OpenAIProvider implements LLMProvider {
     const response = await this.client.responses.parse({
       model: this.model,
       store: false,
+      max_output_tokens: this.maxOutputTokens,
 
       instructions: [
         "Ты анализируешь клиентские обращения для ResolveSignal AI.",
@@ -113,6 +116,7 @@ export class OpenAIProvider implements LLMProvider {
     const response = await this.client.responses.parse({
       model: this.model,
       store: false,
+      max_output_tokens: this.maxOutputTokens,
 
       instructions: [
         "Ты готовишь варианты ответа клиенту от имени компании.",

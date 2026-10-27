@@ -21,3 +21,14 @@ describe("bounded single-instance demo limiter", () => {
     expect(() => limiter.reserve("write", "a", true, 86400000)).not.toThrow();
   });
 });
+
+
+it("bounds public reads and guest sessions globally even across distinct peer IPs", () => {
+  const limiter = new DemoRateLimiter({ ...config, DEMO_READ_GLOBAL_MINUTE: 2, DEMO_GUEST_SESSION_GLOBAL: 2 });
+  for (const kind of ["read", "guest"] as const) {
+    limiter.reserve(kind, "192.0.2.1", false, 1000);
+    limiter.reserve(kind, "192.0.2.2", false, 1000);
+    expect(() => limiter.reserve(kind, "192.0.2.3", false, 1000)).toThrow();
+    expect(() => limiter.reserve(kind, "192.0.2.3", false, 900000)).not.toThrow();
+  }
+});

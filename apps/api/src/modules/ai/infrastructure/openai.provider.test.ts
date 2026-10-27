@@ -71,13 +71,14 @@ describe("OpenAIProvider", () => {
     });
 
     expect(parseMock).toHaveBeenCalledTimes(1);
-    expect(constructorMock).toHaveBeenCalledWith({ apiKey: "test-key", maxRetries: 0 });
+    expect(constructorMock).toHaveBeenCalledWith({ apiKey: "test-key", maxRetries: 0, timeout: 30000 });
 
     const request = parseMock.mock.calls[0]?.[0];
 
     expect(request).toMatchObject({
       model: "test-model",
       store: false,
+      max_output_tokens: 2000,
     });
 
     expect(request.input).toContain(
@@ -190,6 +191,7 @@ describe("OpenAIProvider", () => {
     });
 
     expect(parseMock).toHaveBeenCalledTimes(1);
+    expect(parseMock.mock.calls[0]?.[0]).toMatchObject({ max_output_tokens: 2000, store: false });
   });
 
   it("rejects replies that do not match requested tones", async () => {

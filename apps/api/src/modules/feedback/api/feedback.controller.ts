@@ -1,4 +1,4 @@
-import { DemoCreation } from "../../demo-access/demo-access.config.js";
+import { DemoCreation, GuestReadable, GuestWritable, type DemoRequest } from "../../demo-access/demo-access.config.js";
 import { Body, Controller, Get, Inject, Param, Patch, Post, Query, Req, UseFilters } from "@nestjs/common";
 import { ApiBody, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
 import {
@@ -14,9 +14,7 @@ import { normalizeCreateFeedbackInput } from "../../../common/security/feedback-
 import { AiUsageLimitExceptionFilter } from "../../ai-usage/api/ai-usage-limit-exception.filter.js";
 import { FeedbackService } from "../application/feedback.service.js";
 
-type ClientRequest = {
-  ip?: string;
-};
+type ClientRequest = DemoRequest;
 
 const aiUsageLimitResponse = {
   status: 429,
@@ -41,6 +39,7 @@ export class FeedbackController {
 
   @Post()
   @DemoCreation()
+  @GuestWritable()
   @ApiOperation({ summary: "Create feedback" })
   @ApiBody({
     schema: {
@@ -55,13 +54,15 @@ export class FeedbackController {
       },
     },
   })
-  create(@Body() body: unknown) {
+  create(@Body() body: unknown, @Req() request: DemoRequest) {
     return this.feedbackService.create(
       parseOrThrow(CreateFeedbackSchema, normalizeCreateFeedbackInput(body)),
+      request.guestActor,
     );
   }
 
   @Get()
+  @GuestReadable()
   @ApiOperation({ summary: "List and filter feedback" })
   @ApiQuery({ name: "search", required: false })
   @ApiQuery({ name: "status", required: false })
@@ -73,23 +74,27 @@ export class FeedbackController {
   }
 
   @Get(":id")
+  @GuestReadable()
   @ApiOperation({ summary: "Get feedback details" })
   @ApiParam({ name: "id", format: "uuid" })
-  get(@Param("id") id: string) {
-    return this.feedbackService.get(parseOrThrow(EntityIdSchema, id));
+  get(@Param("id") id: string, @Req() request: DemoRequest) {
+    return this.feedbackService.get(parseOrThrow(EntityIdSchema, id), request.guestActor);
   }
 
   @Post(":id/analyze")
+  @GuestWritable()
   @ApiOperation({ summary: "Analyze feedback with the configured LLM provider" })
   @ApiResponse(aiUsageLimitResponse)
   analyze(@Param("id") id: string, @Req() request: ClientRequest) {
     return this.feedbackService.analyze(
       parseOrThrow(EntityIdSchema, id),
       normalizeClientIp(request.ip ?? "unknown"),
+      request.guestActor,
     );
   }
 
   @Post(":id/replies")
+  @GuestWritable()
   @ApiOperation({ summary: "Generate suggested replies" })
   @ApiResponse(aiUsageLimitResponse)
   @ApiBody({ schema: { type: "object", properties: { tones: { type: "array", items: { type: "string" } } } } })
@@ -103,13 +108,15 @@ export class FeedbackController {
       parseOrThrow(EntityIdSchema, id),
       input.tones,
       normalizeClientIp(request.ip ?? "unknown"),
+      request.guestActor,
     );
   }
 
   @Patch(":id/status")
+  @GuestWritable()
   @ApiOperation({ summary: "Update feedback status" })
-  updateStatus(@Param("id") id: string, @Body() body: unknown) {
+  updateStatus(@Param("id") id: string, @Body() body: unknown, @Req() request: DemoRequest) {
     const input = parseOrThrow(UpdateFeedbackStatusSchema, body);
-    return this.feedbackService.updateStatus(parseOrThrow(EntityIdSchema, id), input.status);
+    return this.feedbackService.updateStatus(parseOrThrow(EntityIdSchema, id), input.status, request.guestActor);
   }
 }

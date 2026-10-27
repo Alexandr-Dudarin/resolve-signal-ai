@@ -181,6 +181,7 @@ export class PrismaFeedbackRepository
     query: FeedbackListQuery,
   ): Promise<FeedbackListResponse> {
     const where: Prisma.FeedbackItemWhereInput = {
+      AND: [{ OR: [{ guestExpiresAt: null }, { guestExpiresAt: { gt: new Date() } }] }],
       ...(query.status
         ? {
             status: query.status,
@@ -288,6 +289,7 @@ export class PrismaFeedbackRepository
         include: detailsInclude,
       });
 
+    if (row?.guestExpiresAt && row.guestExpiresAt.getTime() <= Date.now()) return null;
     return row ? mapDetails(row) : null;
   }
 
@@ -450,6 +452,7 @@ export class PrismaFeedbackRepository
   async allForDashboard(): Promise<FeedbackListResponse> {
     const rows =
       await this.prisma.feedbackItem.findMany({
+        where: { OR: [{ guestExpiresAt: null }, { guestExpiresAt: { gt: new Date() } }] },
         include: {
           analyses: {
             orderBy: {

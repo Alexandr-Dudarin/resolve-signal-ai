@@ -38,7 +38,7 @@ describe("explicit non-destructive demo data", () => {
     expect(() => requirePublicDemoDatabase({ ...local, PUBLIC_DEMO_ALLOW_LOCAL: "true", NODE_ENV: "production" }, "init")).toThrow();
   });
   it.each([
-    { NODE_ENV: "production" }, { DEMO_ACCESS_ENABLED: "true" },
+    { NODE_ENV: "production" }, { DEMO_ACCESS_ENABLED: "true" }, { DEMO_ACCESS_MODE: "guest" },
     { DATABASE_URL: base.DIRECT_URL }, { DATABASE_URL: "postgresql://test:test@localhost/demo?host=remote" },
   ])("blocks destructive seed for protected/nonlocal databases %#", (changes) => {
     expect(() => requireLocalSeedDatabase({ DATABASE_URL: "postgresql://test:test@localhost/test", ...changes })).toThrow();
