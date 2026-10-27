@@ -1,3 +1,4 @@
+import { demoLimitMessage } from "../../shared/lib/demo-limit";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, Plus, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -44,7 +45,7 @@ export function DashboardPage() {
   return (
     <>
       <PageHeader title="Обзор" description="Следите за обращениями клиентов, находите проблемные случаи и проверяйте результаты AI-анализа в одном рабочем пространстве." actions={<Link className={styles.primaryAction} to="/feedback/new"><Plus />Добавить обращение</Link>} />
-      {dashboardQuery.isPending ? <section className={styles.panel}><FeedbackState kind="loading" /></section> : dashboardQuery.isError ? <section className={styles.panel}><FeedbackState kind="error" message="Не удалось загрузить данные обзора." onRetry={() => void dashboardQuery.refetch()} /></section> : (
+      {dashboardQuery.isPending ? <section className={styles.panel}><FeedbackState kind="loading" /></section> : dashboardQuery.isError ? <section className={styles.panel}><FeedbackState kind="error" message={demoLimitMessage(dashboardQuery.error) ?? "Не удалось загрузить данные обзора."} onRetry={() => void dashboardQuery.refetch()} /></section> : (
         <>
           <DashboardStats data={dashboardQuery.data} />
           <div className={styles.insightGrid}>

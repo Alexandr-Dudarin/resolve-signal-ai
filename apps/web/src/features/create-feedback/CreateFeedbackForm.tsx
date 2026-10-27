@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { CreateFeedbackSchema, feedbackSources, type AiUsageLimitError, type CreateFeedbackInput, type FeedbackSource } from "@resolve-signal/contracts";
 import type { z } from "zod";
 import { api } from "../../shared/api/api-client";
@@ -14,6 +14,7 @@ import { Button } from "../../shared/ui/button";
 import { Checkbox } from "../../shared/ui/checkbox";
 import { Select } from "../../shared/ui/select";
 import styles from "./CreateFeedbackForm.module.css";
+import { useDemoAccess } from "../demo-access/DemoAccessGate";
 
 const sourceOptions = feedbackSources.map((value) => ({
   value,
@@ -40,15 +41,19 @@ const validationMessages = {
 
 export function CreateFeedbackForm() {
   const navigate = useNavigate();
+  const access = useDemoAccess();
+  const location = useLocation();
+  const copied = CreateFeedbackSchema.safeParse((location.state as { demoCopy?: unknown } | null)?.demoCopy);
   const queryClient = useQueryClient();
   const [analyzeAfterCreate, setAnalyzeAfterCreate] = useState(true);
   type FormInput = z.input<typeof CreateFeedbackSchema>;
   const form = useForm<FormInput, unknown, CreateFeedbackInput>({
     resolver: zodResolver(CreateFeedbackSchema),
-    defaultValues: { source: "manual", text: "", authorName: "", customerRef: "" },
+    defaultValues: copied.success ? copied.data : { source: "manual", text: "", authorName: "", customerRef: "" },
   });
   const mutation = useMutation({
     mutationFn: async (input: CreateFeedbackInput) => {
+      await access.ensureSession();
       const created = await api.createFeedback(input);
       let analysisFailed = false;
       let analysisLimit: AiUsageLimitError | undefined;

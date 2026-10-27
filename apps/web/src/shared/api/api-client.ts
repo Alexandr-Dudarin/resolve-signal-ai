@@ -1,6 +1,7 @@
 import {
   DemoSessionSchema,
   DemoRateLimitErrorSchema,
+  DemoReadOnlyErrorSchema,
   type DemoRateLimitError,
   AiRuntimeStatusSchema,
   AiUsageLimitErrorSchema,
@@ -21,7 +22,7 @@ import { notifySessionExpired } from "./demo-session-events";
 import { webEnv } from "../config/env";
 
 export class ApiError extends Error {
-  constructor(message: string, readonly status: number, readonly aiUsageLimit?: AiUsageLimitError, readonly demoLimit?: DemoRateLimitError) {
+  constructor(message: string, readonly status: number, readonly aiUsageLimit?: AiUsageLimitError, readonly demoLimit?: DemoRateLimitError, readonly demoReadOnly = false) {
     super(message);
   }
 }
@@ -39,11 +40,13 @@ async function request<T>(path: string, schema: z.ZodType<T>, init?: RequestInit
     const limit = response.status === 429 ? AiUsageLimitErrorSchema.safeParse(payload) : null;
     const demoLimit = response.status === 429 ? DemoRateLimitErrorSchema.safeParse(payload) : null;
     const message = z.object({ message: z.string() }).safeParse(payload);
+    const readOnly = response.status === 403 && DemoReadOnlyErrorSchema.safeParse(payload).success;
     throw new ApiError(
       message.success ? message.data.message : "Не удалось выполнить запрос.",
       response.status,
       limit?.success ? limit.data : undefined,
       demoLimit?.success ? demoLimit.data : undefined,
+      readOnly,
     );
   }
   return schema.parse(await response.json());
@@ -59,6 +62,7 @@ function queryString(query: FeedbackListQuery) {
 
 export const api = {
   demoSession: () => request("/api/v1/demo/session", DemoSessionSchema),
+  startGuest: () => request("/api/v1/demo/session/guest", DemoSessionSchema, { method: "POST", body: "{}" }),
   loginDemo: (code: string) => request("/api/v1/demo/session", DemoSessionSchema, { method: "POST", body: JSON.stringify({ code }) }),
   logoutDemo: () => request("/api/v1/demo/session/logout", DemoSessionSchema, { method: "POST", body: "{}" }),
   aiRuntimeStatus: () => request("/api/v1/ai/runtime-status", AiRuntimeStatusSchema),

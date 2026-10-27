@@ -25,11 +25,11 @@ export function RootLayout() {
           <div className={styles.profile}>
 
             <CircleUserRound aria-hidden="true" />
-            <span><strong>Гость</strong><small>Общее демо</small></span>
-            {access.enabled ? <Button variant="secondary" size="sm" disabled={access.busy} onClick={() => void access.logout()}>{access.busy ? "Выходим…" : "Выйти"}</Button> : null}
+            <span><strong>Гость</strong><small>{access.mode === "guest" ? "Без регистрации" : "Общее демо"}</small></span>
+            {access.enabled && access.authenticated ? <Button variant="secondary" size="sm" disabled={access.busy} onClick={() => void access.logout()}>{access.busy ? "Выходим…" : access.mode === "guest" ? "Завершить сеанс" : "Выйти"}</Button> : null}
           </div>
         </header>
-        <div className={styles.notice}>Общее демо: обращения и изменения видны всем участникам. Не вводите персональные или конфиденциальные данные.</div>
+        <div className={styles.notice}>Общее демо: обращения и изменения видны всем участникам. Не вводите персональные или конфиденциальные данные.{access.mode === "guest" ? " Общие примеры доступны только для чтения. Создайте своё обращение, чтобы попробовать AI. Гостевые данные хранятся временно." : ""}</div>
         {access.error ? <p className={styles.notice} role="alert">{access.error}</p> : null}
         <main className={styles.main}><Outlet /></main>
       </div>

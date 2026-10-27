@@ -38,3 +38,27 @@ describe("feedback plain-text rendering", () => {
     expect(container.querySelectorAll("script, img")).toHaveLength(0);
   });
 });
+
+it("offers a copy of read-only guest data and exposes no mutation controls", async () => {
+  vi.mocked(api.feedback).mockResolvedValue({
+    ...feedback, permissions: { canModify: false, reason: "shared_example", expiresAt: null },
+    suggestedReplies: [{
+      id: "22222222-2222-4222-8222-222222222222", feedbackId: feedback.id,
+      analysisId: "33333333-3333-4333-8333-333333333333", generationId: null, tone: "empathetic",
+      originalText: payload, text: payload, status: "draft", editedAt: null,
+      createdAt: feedback.createdAt, updatedAt: feedback.updatedAt,
+    }],
+  });
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const { container } = render(<QueryClientProvider client={client}><MemoryRouter initialEntries={[`/feedback/${feedback.id}`]}>
+    <Routes><Route path="/feedback/:id" element={<FeedbackDetailsPage />} /></Routes>
+  </MemoryRouter></QueryClientProvider>);
+  expect(await screen.findByRole("link", { name: "Попробовать на своей копии" })).toHaveAttribute("href", "/feedback/new");
+  expect(screen.getByRole("combobox", { name: "Статус обращения" })).toBeDisabled();
+  for (const name of [/Запустить AI-анализ/, /Сгенерировать/, /Одобрить/, /Отклонить/, /Изменить/]) {
+    expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
+  }
+  expect(container.querySelectorAll("script, img")).toHaveLength(0);
+  expect(screen.getByText(payload)).toBeInTheDocument();
+  client.clear();
+});

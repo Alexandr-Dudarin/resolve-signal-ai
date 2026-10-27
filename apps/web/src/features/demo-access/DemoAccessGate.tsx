@@ -7,7 +7,7 @@ import { demoLimitMessage } from "../../shared/lib/demo-limit";
 import { Button } from "../../shared/ui/button";
 import styles from "./DemoAccessGate.module.css";
 
-const AccessContext = createContext({ enabled: false, logout: async () => {}, busy: false, error: "" });
+const AccessContext = createContext({ enabled: false, mode: "code" as "code" | "guest", authenticated: false, ensureSession: async () => {}, logout: async () => {}, busy: false, error: "" });
 export const useDemoAccess = () => useContext(AccessContext);
 
 export function DemoAccessGate({ children }: PropsWithChildren) {
@@ -18,10 +18,19 @@ export function DemoAccessGate({ children }: PropsWithChildren) {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const generation = useRef(0);
+  const mode = useRef<"code" | "guest">("code");
+  const starting = useRef<Promise<void> | null>(null);
 
   const lock = useCallback((reason: string) => {
     generation.current++;
-    setSession(null); setState("locked"); setMessage(reason); setCode(""); setBusy(false);
+    if (mode.current === "guest") {
+      setSession({ mode: "guest", enabled: true, authenticated: false, expiresAt: null });
+      setState("open");
+      setMessage("Гостевой сеанс завершён. Общие обращения доступны для просмотра. При создании обращения начнётся новый сеанс; прежние записи останутся только для чтения.");
+    } else {
+      setSession(null); setState("locked"); setMessage(reason);
+    }
+    setCode(""); setBusy(false);
     void client.cancelQueries();
     client.clear();
   }, [client]);
@@ -31,7 +40,8 @@ export function DemoAccessGate({ children }: PropsWithChildren) {
     try {
       const result = await api.demoSession();
       if (current !== generation.current) return;
-      if (!result.authenticated) { lock("Введите код доступа к демо."); return; }
+      mode.current = result.mode ?? "code";
+      if (result.mode !== "guest" && !result.authenticated) { lock("Введите код доступа к демо."); return; }
       setSession(result); setState("open"); setMessage("");
     } catch {
       if (current !== generation.current) return;
@@ -63,6 +73,33 @@ export function DemoAccessGate({ children }: PropsWithChildren) {
     return () => window.clearTimeout(timer);
   }, [session, lock]);
 
+  async function ensureSession() {
+    if (mode.current !== "guest" || session?.authenticated) return;
+    if (starting.current) return starting.current;
+    const current = ++generation.current;
+    const task = (async () => {
+      setBusy(true); setMessage("");
+      try {
+        await api.startGuest();
+        // Do not create data if the browser/proxy did not retain the HttpOnly cookie.
+        const result = await api.demoSession();
+        if (result.mode !== "guest" || !result.authenticated || current !== generation.current) {
+          throw new Error("Не удалось сохранить гостевой сеанс. Разрешите cookie для этого сайта и повторите попытку.");
+        }
+        setSession(result);
+        await client.invalidateQueries({ queryKey: ["feedback"] });
+      } catch (error) {
+        if (current === generation.current) setMessage(demoLimitMessage(error) ?? (error instanceof Error ? error.message : "Не удалось начать гостевой сеанс. Повторите попытку."));
+        throw error;
+      } finally {
+        if (current === generation.current) setBusy(false);
+        starting.current = null;
+      }
+    })();
+    starting.current = task;
+    return task;
+  }
+
   async function login(event: FormEvent) {
     event.preventDefault();
     const current = ++generation.current;
@@ -91,15 +128,18 @@ export function DemoAccessGate({ children }: PropsWithChildren) {
   }
 
   if (state === "open" && session) return (
-    <AccessContext.Provider value={{ enabled: session.enabled, logout, busy, error: message }}>{children}</AccessContext.Provider>
+    <AccessContext.Provider value={{ enabled: session.enabled, mode: session.mode ?? "code", authenticated: session.authenticated, ensureSession, logout, busy, error: message }}>{children}</AccessContext.Provider>
   );
+  // Mode is server-owned: keep the initial loading view neutral so guest mode
+  // never flashes the code-access screen, even during a Render cold start.
+  if (state === "loading") return <main className={styles.screen} aria-busy="true"><p role="status">Открываем демо…</p></main>;
   return (
     <main className={styles.screen}>
       <section className={styles.card} aria-labelledby="demo-title">
         <span className={styles.brand}>ResolveSignal AI</span>
         <h1 id="demo-title">Добро пожаловать в демо</h1>
         <p>Общее демонстрационное пространство: обращения и изменения видны всем участникам. Используйте только вымышленные данные, без персональной и конфиденциальной информации.</p>
-        {state === "loading" ? <p role="status">Проверяем доступ…</p> : state === "error" ? <>
+        {state === "error" ? <>
           <p role="alert">{message}</p><Button onClick={() => { setState("loading"); void check(); }}>Повторить проверку</Button>
         </> : <form onSubmit={(event) => void login(event)}>
           <label htmlFor="demo-code">Код доступа</label>

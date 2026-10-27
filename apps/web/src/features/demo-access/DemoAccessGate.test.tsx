@@ -7,7 +7,7 @@ import { api } from "../../shared/api/api-client";
 import { DEMO_SESSION_EXPIRED } from "../../shared/api/demo-session-events";
 import { DemoAccessGate, useDemoAccess } from "./DemoAccessGate";
 
-vi.mock("../../shared/api/api-client", () => ({ api: { demoSession: vi.fn(), loginDemo: vi.fn(), logoutDemo: vi.fn() } }));
+vi.mock("../../shared/api/api-client", () => ({ api: { demoSession: vi.fn(), startGuest: vi.fn(), loginDemo: vi.fn(), logoutDemo: vi.fn() } }));
 const locked: DemoSession = { enabled: true, authenticated: false, expiresAt: null };
 const active = (): DemoSession => ({ enabled: true, authenticated: true, expiresAt: new Date(Date.now() + 60000).toISOString() });
 function Content() {
@@ -28,7 +28,7 @@ describe("demo access UX", () => {
     let resolve!: (session: DemoSession) => void;
     vi.mocked(api.demoSession).mockReturnValue(new Promise((r) => { resolve = r; }));
     setup();
-    expect(screen.getByRole("status")).toHaveTextContent("Проверяем доступ");
+    expect(screen.getByRole("status")).toHaveTextContent("Открываем демо");
     expect(screen.queryByText("Защищённые данные")).not.toBeInTheDocument();
     await act(async () => resolve(locked));
     expect(screen.getByLabelText("Код доступа")).toHaveAttribute("type", "password");
@@ -105,5 +105,75 @@ describe("demo access UX", () => {
     setup(); await screen.findByText("Защищённые данные");
     await userEvent.click(screen.getByRole("button", { name: "Выйти" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Не удалось завершить сессию");
+  });
+});
+
+function GuestContent() {
+  const access = useDemoAccess();
+  return <>
+    <h1>Обзор обращений</h1>
+    <button onClick={() => void access.ensureSession().catch(() => {})}>Создать тестовое обращение</button>
+    <button onClick={() => void access.logout()}>Завершить сеанс</button>
+    <span>{access.authenticated ? "Сеанс активен" : "Просмотр демо"}</span>
+    {access.error ? <p role="alert">{access.error}</p> : null}
+  </>;
+}
+const guest: DemoSession = { mode: "guest", enabled: true, authenticated: false, expiresAt: null };
+function guestSetup() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(<QueryClientProvider client={client}><DemoAccessGate><GuestContent /></DemoAccessGate></QueryClientProvider>);
+}
+
+describe("passwordless guest UX", () => {
+  it("opens Dashboard without a code form or allocating a session on page load", async () => {
+    let resolve!: (session: DemoSession) => void;
+    vi.mocked(api.demoSession).mockReturnValue(new Promise((r) => { resolve = r; }));
+    guestSetup();
+    expect(screen.getByRole("status")).toHaveTextContent("Открываем демо");
+    expect(screen.queryByText("Добро пожаловать в демо")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Код доступа")).not.toBeInTheDocument();
+    await act(async () => resolve(guest));
+    expect(await screen.findByRole("heading", { name: "Обзор обращений" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Код доступа")).not.toBeInTheDocument();
+    expect(api.startGuest).not.toHaveBeenCalled(); expect(api.loginDemo).not.toHaveBeenCalled();
+  });
+  it("starts and verifies a cookie-backed session only on the first creation attempt", async () => {
+    vi.mocked(api.demoSession).mockResolvedValueOnce(guest).mockResolvedValue({ ...active(), mode: "guest" });
+    vi.mocked(api.startGuest).mockResolvedValue({ ...active(), mode: "guest" });
+    guestSetup();
+    await userEvent.click(await screen.findByRole("button", { name: "Создать тестовое обращение" }));
+    expect(await screen.findByText("Сеанс активен")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Создать тестовое обращение" }));
+    expect(api.startGuest).toHaveBeenCalledTimes(1);
+    expect(localStorage.length).toBe(0); expect(sessionStorage.length).toBe(0);
+  });
+  it("keeps public content visible on expiry and logout without flashing the code form", async () => {
+    vi.mocked(api.demoSession).mockResolvedValue({ ...active(), mode: "guest" });
+    vi.mocked(api.logoutDemo).mockResolvedValue(guest);
+    guestSetup(); await screen.findByText("Сеанс активен");
+    act(() => window.dispatchEvent(new Event(DEMO_SESSION_EXPIRED)));
+    expect(screen.getByRole("heading", { name: "Обзор обращений" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Код доступа")).not.toBeInTheDocument();
+    expect(screen.getByText("Просмотр демо")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Завершить сеанс" }));
+    expect(screen.getByRole("heading", { name: "Обзор обращений" })).toBeInTheDocument();
+  });
+  it("explains blocked cookies and never claims a session is usable without verification", async () => {
+    vi.mocked(api.demoSession).mockResolvedValue(guest);
+    vi.mocked(api.startGuest).mockResolvedValue({ ...active(), mode: "guest" });
+    guestSetup();
+    await userEvent.click(await screen.findByRole("button", { name: "Создать тестовое обращение" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Разрешите cookie");
+    expect(screen.getByText("Просмотр демо")).toBeInTheDocument();
+    expect(api.startGuest).toHaveBeenCalledTimes(1);
+  });
+  it("shows a guest rate-limit error without automatic retry or locking public browsing", async () => {
+    vi.mocked(api.demoSession).mockResolvedValue(guest);
+    vi.mocked(api.startGuest).mockRejectedValue({ demoLimit: { code: "DEMO_RATE_LIMIT_EXCEEDED", scope: "guest_session_global", retryAfterSeconds: 60 } });
+    guestSetup();
+    await userEvent.click(await screen.findByRole("button", { name: "Создать тестовое обращение" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Слишком много новых гостевых сеансов");
+    expect(api.startGuest).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("heading", { name: "Обзор обращений" })).toBeInTheDocument();
   });
 });
