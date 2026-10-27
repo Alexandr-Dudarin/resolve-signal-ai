@@ -6,6 +6,7 @@ import { AnalyzeFeedbackButton } from "../../features/analyze-feedback/AnalyzeFe
 import { api } from "../../shared/api/api-client";
 import { feedbackSourceLabels, feedbackStatusLabels } from "../../shared/config/presentation";
 import { formatDate, formatRating, shortId } from "../../shared/lib/format";
+import { demoLimitMessage } from "../../shared/lib/demo-limit";
 import { formatAiUsageLimitMessage } from "../../shared/lib/ai-usage-limit";
 import { Badge } from "../../shared/ui/badge";
 import { FeedbackState } from "../../shared/ui/feedback-state";
@@ -47,7 +48,7 @@ export function FeedbackDetailsPage() {
       <Link to="/feedback" className={styles.back}><ArrowLeft />К списку обращений</Link>
       <PageHeader eyebrow="Детали обращения" title={shortId(feedback.id, feedback.externalId)} description="Исходный текст клиента, структурированный AI-анализ и подготовка ответа." actions={<div className={styles.statusControl}><span>Статус</span><Select value={feedback.status} onChange={(value) => statusMutation.mutate(value as FeedbackStatus)} disabled={statusMutation.isPending} ariaLabel="Статус обращения" layout="full" dropdownAlign="end" options={statusOptions} /></div>} />
       {routeState?.analysisFailed && !feedback.latestAnalysis ? <p className={styles.actionError} role="alert">Обращение сохранено, но автоматический AI-анализ не завершился. {analysisLimit.success ? formatAiUsageLimitMessage(analysisLimit.data) : "Повторите запуск в блоке AI-анализа."}</p> : null}
-      {statusMutation.isError ? <p className={styles.actionError} role="alert">Не удалось обновить статус. Предыдущее значение сохранено.</p> : null}
+      {statusMutation.isError ? <p className={styles.actionError} role="alert">{demoLimitMessage(statusMutation.error) ?? "Не удалось обновить статус. Предыдущее значение сохранено."}</p> : null}
       <div className={styles.heroGrid}>
         <section className={styles.original}>
           <header><div><span>01</span><h2>Исходное обращение</h2></div><Badge value={feedback.status} /></header>
@@ -57,7 +58,7 @@ export function FeedbackDetailsPage() {
             <blockquote>“{feedback.text}”</blockquote>
           </div>
         </section>
-        {feedback.latestAnalysis ? <FeedbackAnalysisPanel analysis={feedback.latestAnalysis} /> : <section className={styles.analysisEmpty}><div><Sparkles aria-hidden="true" /></div><span>AI-анализ</span><h2>Получите структурированный разбор обращения.</h2><p>AI-демо определит тональность, критичность, категорию, краткое содержание и основные проблемы.</p><AnalyzeFeedbackButton feedbackId={feedback.id} /></section>}
+        {feedback.latestAnalysis ? <FeedbackAnalysisPanel analysis={feedback.latestAnalysis} /> : <section className={styles.analysisEmpty}><div><Sparkles aria-hidden="true" /></div><span>AI-анализ</span><h2>Получите структурированный разбор обращения.</h2><p>AI определит тональность, критичность, категорию, краткое содержание и основные проблемы.</p><AnalyzeFeedbackButton feedbackId={feedback.id} /></section>}
       </div>
       <SuggestedReplies
         feedbackId={feedback.id}

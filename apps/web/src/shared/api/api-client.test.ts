@@ -19,3 +19,22 @@ describe("API error contract", () => {
     await expect(api.analyze("test-id")).rejects.toBeInstanceOf(ApiError);
   });
 });
+
+it("sends cookies through same-origin proxy and parses demo limits", async () => {
+  const demoLimit = { code: "DEMO_RATE_LIMIT_EXCEEDED", scope: "create_global", retryAfterSeconds: 60 };
+  const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify(demoLimit), { status: 429 }));
+  vi.stubGlobal("fetch", fetch);
+  await expect(api.createFeedback({ source: "manual", text: "test text", externalId: undefined, authorName: undefined, customerRef: undefined })).rejects.toMatchObject({ demoLimit });
+  expect(fetch).toHaveBeenCalledWith("/api/v1/feedback", expect.objectContaining({ credentials: "include", cache: "no-store" }));
+});
+it("announces protected 401 but does not invalidate a session on a wrong login code", async () => {
+  const listener = vi.fn();
+  window.addEventListener("resolve-signal:session-expired", listener);
+  try {
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(() => Promise.resolve(new Response("{}", { status: 401 }))));
+    await expect(api.loginDemo("wrong")).rejects.toBeInstanceOf(ApiError);
+    expect(listener).not.toHaveBeenCalled();
+    await expect(api.feedback("id")).rejects.toBeInstanceOf(ApiError);
+    expect(listener).toHaveBeenCalledTimes(1);
+  } finally { window.removeEventListener("resolve-signal:session-expired", listener); }
+});

@@ -1,136 +1,94 @@
 # ResolveSignal AI
 
-ResolveSignal AI is a customer feedback operations platform that turns reviews, complaints, support messages, and other signals into structured analysis and controlled response drafts.
+ResolveSignal AI — рабочий цикл обработки обращений: исходный текст, структурированный
+AI-анализ, варианты ответа, редактирование и решение оператора. Основной язык интерфейса — русский.
+Внутренние API/DB enums остаются английскими, русские названия находятся в presentation dictionaries.
 
-This repository contains the completed Phase 0 foundation and a substantial mock implementation of Phase 1. It is fully demonstrable without an OpenAI API key: every AI action goes through a deterministic `MockProvider`, is validated with shared Zod contracts, and is persisted in PostgreSQL.
+Реализованы Phase 0, Phase 1, настоящий OpenAI provider и AI security controls.
+Текущий pass `public-demo-readiness` добавляет серверный код доступа к общему демо,
+ограниченные сессии, защиту записей и конфигурацию для Vercel / Render / Neon.
+**Облачная публикация ещё не выполнена и требует отдельной приёмки.**
 
-## Included in this pass
+## Возможности и границы
 
-- pnpm workspace monorepo
-- React, Vite, TypeScript, React Router, TanStack Query, React Hook Form, CSS Modules
-- Feature-Sliced Design frontend baseline
-- NestJS REST API and Swagger/OpenAPI
-- PostgreSQL and Prisma schema/migration/seed
-- shared TypeScript/Zod contracts used by web and API
-- Dashboard, Feedback List, Create Feedback, Feedback Details
-- Russian-first public demo UI with presentation-layer dictionaries for enum labels
-- Russian deterministic seed feedback, AI summaries, detected problems, and suggested replies
-- unified Russian UX terminology: `FeedbackItem` is presented as «обращение», and AI surfaces consistently use `AI-анализ` / `AI-демо`
-- deterministic analysis and suggested reply generation
-- reply editing, approval, and rejection
-- feedback status updates, search, and filters
-- loading, empty, and error states
-- responsive sidebar, table-to-card behavior, and form layouts
-- accessible custom Select and Checkbox adapted to ResolveSignal tokens
-- lint, typecheck, unit/integration tests, build scripts, and CI baseline
+- React/Vite/TypeScript, FSD, React Router, TanStack Query, React Hook Form, CSS Modules.
+- NestJS REST, общие Zod/TypeScript contracts, PostgreSQL/Prisma, pnpm monorepo.
+- Обзор, список/фильтры, создание и детали обращения; анализ, generation history,
+  редактирование/approve/reject ответа, смена статуса; loading/empty/error/responsive states.
+- `AI_PROVIDER=mock` — детерминированный локальный режим без OpenAI key.
+  `AI_PROVIDER=openai` — Responses API + Structured Outputs/Zod, серверные ключ и модель,
+  `store:false`, `maxRetries:0`, без fallback на Mock.
+- PostgreSQL-атомарные AI-квоты, plain-text XSS normalization, недоверенные данные отдельно от instructions.
+- Gated demo: общий workspace, HttpOnly cookie, logout/revocation, CSRF Origin validation,
+  rate limits, ограничения body, cache clearing и понятные сообщения на русском.
 
-Not included: OpenAI API calls, production prompts, Structured Outputs against a real model, agent/tool calling, cases, Telegram, background jobs, API keys, webhooks, auth, RBAC, multi-tenancy, billing, queues, or microservices.
+Не реализованы Agent/tool calling, Telegram, Cases/V2, webhooks/V3, billing, full auth/RBAC,
+multi-tenancy, queues и background jobs. Доступ по коду не даёт изоляцию данных между гостями.
 
-## Requirements
+## Локальный запуск
 
-- Node.js 24+
-- pnpm 11+
-- Docker with Docker Compose (recommended local PostgreSQL path)
-
-## Local setup
+Node 24+, **pnpm 11.19.0** (packageManager), Docker Compose для локального PostgreSQL.
 
 ```bash
 cp .env.example .env
-pnpm install
+corepack pnpm install --frozen-lockfile
 pnpm db:start
 pnpm db:migrate
 pnpm db:seed
 pnpm dev
 ```
 
-Open:
+`db:seed` удаляет локальные demo данные/counters: применять только к своей локальной dev DB.
+Теперь он отказывает для production, включённого gate и non-local database host.
+Он никогда не запускается при production build/start. Для выделенного публичного demo —
+только отдельные guarded `db:demo:migrate` и `db:demo:init` после review.
 
-- Web: http://localhost:5173
-- API health: http://localhost:4000/health
-- Swagger: http://localhost:4000/api/docs
+Web http://localhost:5173; health http://localhost:4000/health;
+Swagger http://localhost:4000/api/docs доступен только в ungated development.
+`VITE_API_URL` пустой, Vite проксирует `/api` на localhost:4000. Если локальный PORT меняется,
+согласованно изменить dev proxy. Критический локальный seed:
+`/feedback/33333333-3333-4333-8333-333333333333`.
 
-The seeded critical demo is available at:
+Для локальной проверки gate включить DEMO_ACCESS_ENABLED и задать два независимо
+сгенерированных секрета согласно `.env.example`. Для live локально добавить серверные
+OPENAI_API_KEY и OPENAI_MODEL, выбрать AI_PROVIDER=openai; это отдельное платное действие.
+Ни тесты, ни demo initializer не обращаются в OpenAI.
 
-```text
-http://localhost:5173/feedback/33333333-3333-4333-8333-333333333333
-```
+## Команды
 
-The seed command resets the three V1 demo tables before inserting deterministic demo data. Use it only against a local/development database.
-
-## Root commands
-
-| Command | Purpose |
+| Команда | Назначение |
 | --- | --- |
-| `pnpm dev` | Start web and API together |
-| `pnpm dev:web` | Start only Vite |
-| `pnpm dev:api` | Start only NestJS |
-| `pnpm db:start` | Start PostgreSQL through Docker Compose |
-| `pnpm db:stop` | Stop local containers |
-| `pnpm db:generate` | Generate Prisma Client |
-| `pnpm db:migrate` | Apply committed migrations |
-| `pnpm db:migrate:dev` | Create/apply a development migration |
-| `pnpm db:seed` | Reset and insert deterministic demo data |
-| `pnpm lint` | Run ESLint across the workspace |
-| `pnpm typecheck` | Typecheck contracts, API, and web |
-| `pnpm test` | Run all Vitest suites |
-| `pnpm build` | Build contracts, API, and web |
+| `pnpm dev`, `pnpm dev:api`, `pnpm dev:web` | Запуск разработки |
+| `pnpm db:generate` | Генерация Prisma Client, также postinstall |
+| `pnpm db:migrate` | Применение существующих migrations к DATABASE_URL; обычно локально |
+| `pnpm db:migrate:dev` | Создание новой migration только в development |
+| `pnpm db:seed` | Разрушительный локальный reset/demo seed |
+| `pnpm db:demo:migrate`, `pnpm db:demo:init` | Явные guarded команды выделенной demo DB |
+| `pnpm exec prisma validate` | Проверка Prisma schema |
+| `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` | Все проверки workspace и operations scripts |
+| `pnpm test:ops` | Deployment/DB guard/initializer tests |
 
-## Repository map
+## Структура и архитектура
 
-```text
-resolve-signal-ai/
-├── apps/
-│   ├── api/                 # NestJS modular backend
-│   └── web/                 # React/Vite FSD frontend
-├── packages/
-│   └── contracts/           # shared Zod schemas and inferred types
-├── prisma/                  # schema, migration, deterministic seed
-├── docs/                    # approved source-of-truth documents
-├── .github/workflows/ci.yml
-├── docker-compose.yml
-├── pnpm-workspace.yaml
-└── package.json
-```
+- `apps/web`: app/pages/widgets/features/shared (FSD), presentation labels, API client.
+- `apps/api`: modular NestJS, `demo-access` global guard, feedback/replies/AI/AI-usage modules.
+- `packages/contracts`: shared schemas/types, включая session и 429 contracts.
+- `prisma`: schema, неизменённые исторические SQL, local seed и insert-only public initializer.
+- `deployment`, `vercel.ts`, `render.yaml`: конфигурация будущей публикации.
+- `docs`, `.github/workflows/ci.yml`: архитектура, безопасность, приёмка и CI.
 
-## API surface
+Application services зависят от `LLMProvider` / `FeedbackRepository`; controllers валидируют
+вход, Prisma изолирована в repositories. Provider получает минимальный контекст.
+Ключи AI/DB не передаются браузеру. Стандартные GET/POST/PATCH `/api/v1/...` сохранены;
+добавлены GET/POST `/api/v1/demo/session` и POST `/api/v1/demo/session/logout`.
 
-```text
-GET    /health
-GET    /api/v1/dashboard/summary
-POST   /api/v1/feedback
-GET    /api/v1/feedback
-GET    /api/v1/feedback/:id
-POST   /api/v1/feedback/:id/analyze
-POST   /api/v1/feedback/:id/replies
-PATCH  /api/v1/feedback/:id/status
-PATCH  /api/v1/replies/:id
-GET    /api/docs
-```
+## Документы
 
-## Architecture notes
+- [Актуальный checkpoint](docs/CURRENT_STATUS.md)
+- [Публикация и эксплуатация Vercel / Render / Neon](docs/PUBLIC_DEMO_DEPLOYMENT.md)
+- [Локальная приёмка и ограничения проверок](docs/PUBLIC_DEMO_VALIDATION.md)
+- [AI security](docs/AI_SECURITY.md), [предыдущая security acceptance](docs/AI_SECURITY_VALIDATION.md)
 
-- The browser never receives AI or database credentials.
-- Both applications import enums and request/response validation from `@resolve-signal/contracts`.
-- Internal API, TypeScript, Zod, enum, and database values remain English; Russian labels live only in the web presentation layer.
-- Application services depend on `LLMProvider` and `FeedbackRepository` ports.
-- `MockProvider` is the only AI adapter registered in this pass.
-- Provider inputs are explicit data-minimized contexts; analysis does not receive customer references, reply history, status history, or unrelated metadata.
-- Prisma is isolated in `PrismaFeedbackRepository`; controllers do not contain database logic.
-- Mock output is parsed through `FeedbackAnalysisSchema` before persistence.
-- UUID route parameters and all request bodies/queries are validated before persistence access.
-- FSD layers remain pragmatic: only meaningful entities/features/widgets received their own slices.
-
-Current checkpoint details are tracked in `docs/CURRENT_STATUS.md`.
-
-## Before real OpenAI integration
-
-Review these areas first:
-
-1. `packages/contracts/src/index.ts` — the structured analysis and reply contracts.
-2. `apps/api/src/modules/ai/ports/llm-provider.ts` — the provider boundary.
-3. `apps/api/src/modules/ai/infrastructure/mock.provider.ts` — deterministic reference behavior.
-4. `apps/api/src/modules/feedback/application/feedback.service.ts` — orchestration and failure semantics.
-5. `apps/api/src/modules/feedback/infrastructure/prisma-feedback.repository.ts` — persistence and usage metadata.
-6. `prisma/schema.prisma` — history, token usage, prompt version, and relation constraints.
-7. `apps/web/src/widgets/feedback-analysis/` and `suggested-replies/` — processing, retry, and result UX.
-8. environment validation and data-minimization/logging policy before adding any provider secret.
+Первоначальные Blueprint/Technical Spec/DESIGN_SPEC в `docs` сохранены. Последующие
+утверждённые handoff расширяют Phase 1: реальные LLM и public-demo access допустимы,
+перехода к Agent V2 нет. CSS, light Hybrid Intelligence и внутренние enums сохранены.

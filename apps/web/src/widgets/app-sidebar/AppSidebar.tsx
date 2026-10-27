@@ -56,8 +56,8 @@ export function AppSidebar() {
         }
       : runtimeStatus.data.mode === "live"
         ? {
-            title: "Live AI работает",
-            description: "OpenAI подключён",
+            title: "Режим OpenAI",
+            description: "Запросы отправляются в OpenAI",
             detail: runtimeStatus.data.model,
           }
         : {

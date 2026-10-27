@@ -1,0 +1,59 @@
+.screen {
+  display: grid;
+  min-height: 100dvh;
+  padding: 24px;
+  place-items: center;
+  background: var(--rs-bg);
+}
+
+.card {
+  width: min(100%, 480px);
+  padding: clamp(24px, 5vw, 40px);
+  border: 1px solid var(--rs-border);
+  border-radius: var(--rs-radius-xl);
+  background: var(--rs-surface);
+  box-shadow: var(--rs-shadow-md);
+}
+
+.brand {
+  display: block;
+  margin-bottom: 28px;
+  color: var(--rs-accent);
+  font-weight: 700;
+}
+
+.card h1 {
+  font-size: 26px;
+  line-height: 1.25;
+}
+
+.card p,
+.card small {
+  color: var(--rs-text-secondary);
+  line-height: 1.6;
+}
+
+.card form {
+  display: grid;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.card label {
+  font-weight: 600;
+}
+
+.card input {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid var(--rs-border);
+  border-radius: var(--rs-radius-sm);
+  background: var(--rs-surface);
+  color: var(--rs-text);
+}
+
+.card [role="alert"] {
+  margin: 0;
+  color: var(--rs-critical);
+}

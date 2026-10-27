@@ -1,3 +1,4 @@
+import { requireLocalSeedDatabase } from "./demo-database-guard.js";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -12,6 +13,7 @@ const ids = {
 };
 
 async function main() {
+  requireLocalSeedDatabase(process.env);
   await prisma.aiUsageCounter.deleteMany();
   await prisma.suggestedReply.deleteMany();
   await prisma.feedbackAnalysis.deleteMany();
@@ -134,8 +136,8 @@ async function main() {
 
 main()
   .then(async () => prisma.$disconnect())
-  .catch(async (error) => {
-    console.error(error);
+  .catch(async () => {
+    console.error("Local seed failed. Check local development database configuration.");
     await prisma.$disconnect();
     process.exit(1);
   });

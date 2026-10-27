@@ -1,3 +1,4 @@
+import { DemoAccessModule } from "../modules/demo-access/demo-access.module.js";
 import { Module } from "@nestjs/common";
 
 import { getApiEnv } from "./env.js";
@@ -41,6 +42,7 @@ const aiUsageConfig = {
 };
 
 @Module({
+  imports: [DemoAccessModule],
   controllers: [
     HealthController,
     AiRuntimeController,

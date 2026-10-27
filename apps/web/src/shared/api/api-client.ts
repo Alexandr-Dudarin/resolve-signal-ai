@@ -1,4 +1,7 @@
 import {
+  DemoSessionSchema,
+  DemoRateLimitErrorSchema,
+  type DemoRateLimitError,
   AiRuntimeStatusSchema,
   AiUsageLimitErrorSchema,
   DashboardSummarySchema,
@@ -14,10 +17,11 @@ import {
   type AiUsageLimitError,
 } from "@resolve-signal/contracts";
 import { z } from "zod";
+import { notifySessionExpired } from "./demo-session-events";
 import { webEnv } from "../config/env";
 
 export class ApiError extends Error {
-  constructor(message: string, readonly status: number, readonly aiUsageLimit?: AiUsageLimitError) {
+  constructor(message: string, readonly status: number, readonly aiUsageLimit?: AiUsageLimitError, readonly demoLimit?: DemoRateLimitError) {
     super(message);
   }
 }
@@ -25,16 +29,21 @@ export class ApiError extends Error {
 async function request<T>(path: string, schema: z.ZodType<T>, init?: RequestInit): Promise<T> {
   const response = await fetch(`${webEnv.VITE_API_URL}${path}`, {
     ...init,
+    credentials: "include",
+    cache: "no-store",
     headers: { "Content-Type": "application/json", ...init?.headers },
   });
   if (!response.ok) {
+    if (response.status === 401 && !path.startsWith("/api/v1/demo/session")) notifySessionExpired();
     const payload: unknown = await response.json().catch(() => null);
     const limit = response.status === 429 ? AiUsageLimitErrorSchema.safeParse(payload) : null;
+    const demoLimit = response.status === 429 ? DemoRateLimitErrorSchema.safeParse(payload) : null;
     const message = z.object({ message: z.string() }).safeParse(payload);
     throw new ApiError(
       message.success ? message.data.message : "Не удалось выполнить запрос.",
       response.status,
       limit?.success ? limit.data : undefined,
+      demoLimit?.success ? demoLimit.data : undefined,
     );
   }
   return schema.parse(await response.json());
@@ -49,6 +58,9 @@ function queryString(query: FeedbackListQuery) {
 }
 
 export const api = {
+  demoSession: () => request("/api/v1/demo/session", DemoSessionSchema),
+  loginDemo: (code: string) => request("/api/v1/demo/session", DemoSessionSchema, { method: "POST", body: JSON.stringify({ code }) }),
+  logoutDemo: () => request("/api/v1/demo/session/logout", DemoSessionSchema, { method: "POST", body: "{}" }),
   aiRuntimeStatus: () => request("/api/v1/ai/runtime-status", AiRuntimeStatusSchema),
   dashboard: () => request("/api/v1/dashboard/summary", DashboardSummarySchema),
   listFeedback: (query: FeedbackListQuery) =>

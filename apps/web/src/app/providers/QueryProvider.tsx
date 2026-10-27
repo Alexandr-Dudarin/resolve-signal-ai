@@ -6,7 +6,7 @@ export function QueryProvider({ children }: PropsWithChildren) {
     () =>
       new QueryClient({
         defaultOptions: {
-          queries: { staleTime: 15_000, retry: 1, refetchOnWindowFocus: false },
+          queries: { staleTime: 15_000, retry: (failureCount, error) => !("status" in error && [401, 403, 429].includes(Number(error.status))) && failureCount < 1, refetchOnWindowFocus: false },
           mutations: { retry: 0 },
         },
       }),

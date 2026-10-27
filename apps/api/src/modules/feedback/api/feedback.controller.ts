@@ -1,3 +1,4 @@
+import { DemoCreation } from "../../demo-access/demo-access.config.js";
 import { Body, Controller, Get, Inject, Param, Patch, Post, Query, Req, UseFilters } from "@nestjs/common";
 import { ApiBody, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
 import {
@@ -39,6 +40,7 @@ export class FeedbackController {
   constructor(@Inject(FeedbackService) private readonly feedbackService: FeedbackService) {}
 
   @Post()
+  @DemoCreation()
   @ApiOperation({ summary: "Create feedback" })
   @ApiBody({
     schema: {
