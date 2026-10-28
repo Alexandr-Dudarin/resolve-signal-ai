@@ -58,7 +58,7 @@ export function DashboardPage() {
             </section>
           </div>
           <section className={styles.panel}>
-            <div className={styles.panelHeader}><div><span>Последние обращения</span><h2>Недавние обращения</h2></div><Link to="/feedback">Показать все <ArrowRight /></Link></div>
+            <div className={styles.panelHeader}><div><span>Последние обращения</span><h2>Недавние обращения</h2></div>{dashboardQuery.data.total > 10 ? <Link to="/feedback">Показать все <ArrowRight /></Link> : null}</div>
             {dashboardQuery.data.recentFeedback.length ? <FeedbackTable items={dashboardQuery.data.recentFeedback} /> : <FeedbackState kind="empty" message="Добавьте первое обращение, чтобы наполнить обзор данными." />}
           </section>
         </>

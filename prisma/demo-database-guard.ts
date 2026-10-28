@@ -1,4 +1,4 @@
-export function requirePublicDemoDatabase(env: NodeJS.ProcessEnv, action: "init" | "migrate"): string {
+export function requirePublicDemoDatabase(env: NodeJS.ProcessEnv, action: "init" | "migrate" | "labels"): string {
   if (env.PUBLIC_DEMO_CONFIRM !== `${action}-public-demo`) throw new Error("Explicit PUBLIC_DEMO_CONFIRM is required");
   if (!env.DIRECT_URL || !env.PUBLIC_DEMO_DB_HOST || !env.PUBLIC_DEMO_DB_NAME) throw new Error("DIRECT_URL and exact demo database identity are required");
   let url: URL;

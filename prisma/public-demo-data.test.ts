@@ -13,12 +13,17 @@ describe("explicit non-destructive demo data", () => {
     await initializePublicDemo({ feedbackItem: { createMany } } as unknown as PrismaClient);
     expect(createMany).toHaveBeenCalledExactlyOnceWith({ data: publicDemoFeedback, skipDuplicates: true });
     expect(new Set(publicDemoFeedback.map((x) => x.id)).size).toBe(5);
-    expect(publicDemoFeedback.every((x) => x.text.startsWith("Демо:") && x.authorName === "Демо-клиент")).toBe(true);
+    expect(publicDemoFeedback.every((x) => x.text.startsWith("Демо:"))).toBe(true);
+    expect(publicDemoFeedback.map((x) => x.authorName)).toEqual(["Стефания", "Даниил", "Кристина", "Артём", "Мария"]);
+    expect(publicDemoFeedback.map((x) => x.externalId)).toEqual(["FDB-DEMO-001", "FDB-DEMO-002", "FDB-DEMO-003", "FDB-DEMO-004", "FDB-DEMO-005"]);
+    expect(publicDemoFeedback.map((x) => x.customerRef)).toEqual(["CUS-DEMO-001", "CUS-DEMO-002", "CUS-DEMO-003", "CUS-DEMO-004", "CUS-DEMO-005"]);
   });
   it("requires exact database and action confirmation", () => {
     expect(requirePublicDemoDatabase(base, "init")).toBe(base.DIRECT_URL);
     expect(() => requirePublicDemoDatabase(base, "migrate")).toThrow();
     expect(requirePublicDemoDatabase({ ...base, PUBLIC_DEMO_CONFIRM: "migrate-public-demo" }, "migrate")).toBe(base.DIRECT_URL);
+    expect(() => requirePublicDemoDatabase(base, "labels")).toThrow();
+    expect(requirePublicDemoDatabase({ ...base, PUBLIC_DEMO_CONFIRM: "labels-public-demo" }, "labels")).toBe(base.DIRECT_URL);
   });
   it.each([
     { PUBLIC_DEMO_CONFIRM: undefined }, { DIRECT_URL: undefined }, { PUBLIC_DEMO_DB_NAME: "normal_database" },

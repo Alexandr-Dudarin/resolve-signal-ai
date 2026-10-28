@@ -156,6 +156,27 @@ body >32 KiB — 413; не JSON — 415. Технические ошибки р�
 **В implementation-pass ни одна команда не направлялась в Neon.** Не запускать `db:seed`,
 `migrate reset`, `db push`, ручное исправление `_prisma_migrations` или массовое удаление.
 Повторный initializer не нужен, если пять примеров уже есть. Исторические checksums не менять.
+
+### Метаданные пяти защищённых примеров (отдельное необязательное действие)
+
+Пять примеров, созданных предыдущим initializer, уже есть в Neon. Изменение шаблонов
+`prisma/public-demo-data.ts` **не обновляет** существующие записи: `db:demo:init`
+остаётся insert-only. Для приятного отображения имён и уникальных `FDB-DEMO-001` ... `005`
+добавлена отдельная команда `pnpm db:demo:labels`. Она обновляет только
+`author_name`, `customer_ref` и `external_id` у пяти точно известных UUID, в
+одной транзакции, с проверкой исходного текста, источника и отсутствия guest ownership.
+Любые неожиданные/отсутствующие/уже вручную изменённые данные → отказ без частичного
+изменения. Повторный запуск после успеха делает 0 обновлений.
+
+**Локально** сначала подтвердить эту команду на отдельной тестовой PostgreSQL
+`resolve_signal_demo_test`. **В Neon — только после завершения локальной QA и
+разрешения на публикацию** и применения guest migration. Настроить отдельный shell:
+`NODE_ENV=production`, `DIRECT_URL` (не Pooled), точные
+`PUBLIC_DEMO_DB_HOST`, `PUBLIC_DEMO_DB_NAME=resolve_signal_demo`,
+`PUBLIC_DEMO_CONFIRM=labels-public-demo`; запускать `pnpm db:demo:labels`.
+Не использовать `db:seed`, `migrate reset` или ручные массовые UPDATE.
+Созданные гостями записи, анализы/ответы и AI counters не меняются.
+
 DDL получает обычные PostgreSQL locks; применять вне активной демонстрации.
 
 Для возврата к защищённому режиму установить `DEMO_ACCESS_MODE=code`, оставить controls=true,

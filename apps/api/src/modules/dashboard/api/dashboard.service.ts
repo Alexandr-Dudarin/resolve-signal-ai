@@ -25,7 +25,7 @@ export class DashboardService {
       analyzed: items.filter((item) => item.latestAnalysis).length,
       sentiment: countBy(sentiments, ["positive", "neutral", "negative", "mixed"]),
       severity: countBy(severities, ["low", "medium", "high", "critical"]),
-      recentFeedback: items.slice(0, 5),
+      recentFeedback: items.slice(0, 10),
     };
   }
 }
