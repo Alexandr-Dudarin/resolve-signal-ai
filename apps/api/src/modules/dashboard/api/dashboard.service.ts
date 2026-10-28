@@ -1,6 +1,25 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { DashboardSummary, Sentiment, Severity } from "@resolve-signal/contracts";
+import type { DashboardSummary, FeedbackListItem, Sentiment, Severity } from "@resolve-signal/contracts";
 import { FEEDBACK_REPOSITORY, type FeedbackRepository } from "../../feedback/domain/feedback.repository.js";
+
+// Three stable, synthetic showcases created by the original local seed and
+// the guarded public-demo showcase initializer. Guest submissions cannot evict them.
+const PINNED_SHOWCASE_IDS = [
+  "33333333-3333-4333-8333-333333333333", // Sofia: critical payment
+  "22222222-2222-4222-8222-222222222222", // Dmitry: triaged delivery
+  "11111111-1111-4111-8111-111111111111", // Anna: approved reply
+] as const;
+
+function selectDashboardFeedback(items: FeedbackListItem[]): FeedbackListItem[] {
+  const byId = new Map(items.map((item) => [item.id, item]));
+  const pinned = PINNED_SHOWCASE_IDS.flatMap((id) => {
+    const item = byId.get(id);
+    return item ? [item] : [];
+  });
+  const pinnedIds = new Set(pinned.map((item) => item.id));
+  const recent = items.filter((item) => !pinnedIds.has(item.id)).slice(0, 10 - pinned.length);
+  return [...recent, ...pinned];
+}
 
 @Injectable()
 export class DashboardService {
@@ -25,7 +44,7 @@ export class DashboardService {
       analyzed: items.filter((item) => item.latestAnalysis).length,
       sentiment: countBy(sentiments, ["positive", "neutral", "negative", "mixed"]),
       severity: countBy(severities, ["low", "medium", "high", "critical"]),
-      recentFeedback: items.slice(0, 5),
+      recentFeedback: selectDashboardFeedback(items),
     };
   }
 }

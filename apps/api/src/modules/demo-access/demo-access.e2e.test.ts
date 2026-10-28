@@ -67,6 +67,7 @@ describe("server-enforced shared demo gate (full AppModule)", () => {
 
   it("allows only safe public health/session status; hides Swagger HTML and JSON", async () => {
     await request(app.getHttpServer()).get("/health").expect(200);
+    await request(app.getHttpServer()).post("/api/v1/demo/session/guest").set("Origin", origin).send({}).expect(404);
     const status = await request(app.getHttpServer()).get("/api/v1/demo/session").expect(200);
     expect(status.body).toEqual({ enabled: true, authenticated: false, expiresAt: null });
     expect(status.headers["cache-control"]).toBe("no-store");
@@ -83,8 +84,8 @@ describe("server-enforced shared demo gate (full AppModule)", () => {
     await request(app.getHttpServer()).post("/api/v1/feedback").set("Cookie", value).set("Origin", origin).send({ text: "Тестовое обращение" }).expect(201);
     await request(app.getHttpServer()).patch(`/api/v1/feedback/${id}/status`).set("Cookie", value).set("Origin", origin).send({ status: "resolved" }).expect(200);
     await request(app.getHttpServer()).patch(`/api/v1/replies/${id}`).set("Cookie", value).set("Origin", origin).send({ status: "approved" }).expect(200);
-    expect(service.updateStatus).toHaveBeenCalledWith(id, "resolved");
-    expect(service.updateReply).toHaveBeenCalledWith(id, { status: "approved" });
+    expect(service.updateStatus).toHaveBeenCalledWith(id, "resolved", undefined);
+    expect(service.updateReply).toHaveBeenCalledWith(id, { status: "approved" }, undefined);
     expect(JSON.stringify(refreshed.body)).not.toContain(code);
   });
 

@@ -1,13 +1,13 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException } from "@nestjs/common";
 import type { ServerResponse } from "node:http";
-import { DemoRateLimitErrorSchema } from "@resolve-signal/contracts";
+import { DemoRateLimitErrorSchema, DemoReadOnlyErrorSchema } from "@resolve-signal/contracts";
 
 @Catch()
 export class DemoErrorFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost) {
     const response = host.switchToHttp().getResponse<ServerResponse>();
     const status = exception instanceof HttpException ? exception.getStatus()
-      : typeof exception === "object" && exception !== null && "status" in exception && exception.status === 413 ? 413 : 500;
+      : typeof exception === "object" && exception !== null && "status" in exception && (exception.status === 413 || exception.status === 400) ? exception.status : 500;
     const body = exception instanceof HttpException ? exception.getResponse() : null;
     const limit = DemoRateLimitErrorSchema.safeParse(body);
     response.statusCode = status;
@@ -18,9 +18,14 @@ export class DemoErrorFilter implements ExceptionFilter {
       response.end(JSON.stringify(limit.data));
       return;
     }
+    const readOnly = DemoReadOnlyErrorSchema.safeParse(body);
+    if (status === 403 && readOnly.success) {
+      response.end(JSON.stringify(readOnly.data));
+      return;
+    }
     // Never serialize exception messages/stacks from Prisma, provider SDKs or middleware.
     const messages: Record<number, string> = {
-      400: "Проверьте данные запроса.", 401: "Неверный код доступа или срок сессии истёк.",
+      400: "Проверьте данные запроса.", 401: "Нет доступа или срок сессии истёк.",
       403: "Недопустимый источник запроса.", 404: "Запрошенные данные не найдены.",
       413: "Запрос слишком большой.", 415: "Ожидается JSON-запрос.",
     };

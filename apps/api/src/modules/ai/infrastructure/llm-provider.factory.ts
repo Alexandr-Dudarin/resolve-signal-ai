@@ -15,5 +15,5 @@ export function createLlmProvider(env: ApiEnv): LLMProvider {
     );
   }
 
-  return new OpenAIProvider(env.OPENAI_API_KEY, env.OPENAI_MODEL);
+  return new OpenAIProvider(env.OPENAI_API_KEY, env.OPENAI_MODEL, env.OPENAI_MAX_OUTPUT_TOKENS, env.OPENAI_TIMEOUT_MS);
 }

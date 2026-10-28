@@ -25,6 +25,7 @@ type SuggestedRepliesProps = {
   feedbackId: string;
   currentGeneration: ReplyGeneration | null;
   replies: SuggestedReply[];
+  readOnly?: boolean;
 };
 
 function formatTokenCount(value: number | null) {
@@ -35,6 +36,7 @@ export function SuggestedReplies({
   feedbackId,
   currentGeneration,
   replies,
+  readOnly = false,
 }: SuggestedRepliesProps) {
   const currentReplies = currentGeneration
     ? replies.filter(
@@ -66,7 +68,7 @@ export function SuggestedReplies({
             </span>
           </div>
 
-          {showHeaderAction ? (
+          {showHeaderAction && !readOnly ? (
             <div className={styles.headerAction}>
               <GenerateRepliesButton
                 feedbackId={feedbackId}
@@ -94,15 +96,15 @@ export function SuggestedReplies({
         {currentReplies.length ? (
           <div className={styles.grid}>
             {currentReplies.map((reply) => (
-              <ReplyEditor key={reply.id} reply={reply} />
+              <ReplyEditor key={reply.id} reply={reply} readOnly={readOnly} />
             ))}
           </div>
         ) : (
           <div className={styles.empty}>
             <div><MessageSquareText aria-hidden="true" /></div>
             <h3>Предложенных ответов пока нет</h3>
-            <p>Создайте проверенные черновики ответов на основе последнего AI-анализа.</p>
-            {!showHeaderAction ? (
+            <p>{readOnly ? "Генерация и редактирование доступны для ваших тестовых обращений." : "Создайте проверенные черновики ответов на основе последнего AI-анализа."}</p>
+            {!showHeaderAction && !readOnly ? (
               <GenerateRepliesButton
                 feedbackId={feedbackId}
                 hasCurrentGeneration={false}

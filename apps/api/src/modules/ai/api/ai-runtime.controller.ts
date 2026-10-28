@@ -1,3 +1,4 @@
+import { GuestReadable } from "../../demo-access/demo-access.config.js";
 import { Controller, Get, Inject } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { AiRuntimeStatus } from "@resolve-signal/contracts";
@@ -13,6 +14,7 @@ export class AiRuntimeController {
   ) {}
 
   @Get("runtime-status")
+  @GuestReadable()
   @ApiOperation({ summary: "Get safe active AI provider status" })
   getRuntimeStatus(): AiRuntimeStatus {
     return this.runtimeStatus;

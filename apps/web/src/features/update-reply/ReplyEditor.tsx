@@ -9,7 +9,7 @@ import { Badge } from "../../shared/ui/badge";
 import { Button } from "../../shared/ui/button";
 import styles from "./ReplyEditor.module.css";
 
-export function ReplyEditor({ reply }: { reply: SuggestedReply }) {
+export function ReplyEditor({ reply, readOnly = false }: { reply: SuggestedReply; readOnly?: boolean }) {
   const client = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(reply.text);
@@ -22,8 +22,8 @@ export function ReplyEditor({ reply }: { reply: SuggestedReply }) {
   });
   return (
     <article className={styles.reply}>
-      <header><div><span>{getReplyToneLabel(reply.tone)} вариант</span><Badge value={reply.status} /></div><div><Button size="sm" variant="ghost" onClick={() => setEditing((value) => !value)}><Pencil />{editing ? "Отменить" : "Изменить"}</Button><Button size="sm" variant="danger" disabled={mutation.isPending} onClick={() => mutation.mutate({ status: "rejected" })}><X />Отклонить</Button><Button size="sm" disabled={mutation.isPending} onClick={() => mutation.mutate({ status: "approved" })}><Check />Одобрить</Button></div></header>
-      {editing ? <div className={styles.editor}><textarea value={text} onChange={(event) => setText(event.target.value)} rows={9} aria-label="Редактировать предложенный ответ" /><Button size="sm" onClick={() => mutation.mutate({ text })} disabled={mutation.isPending || !text.trim()}>Сохранить ответ</Button></div> : <p>{reply.text}</p>}
+      <header><div><span>{getReplyToneLabel(reply.tone)} вариант</span><Badge value={reply.status} /></div>{!readOnly ? <div><Button size="sm" variant="ghost" onClick={() => setEditing((value) => !value)}><Pencil />{editing ? "Отменить" : "Изменить"}</Button><Button size="sm" variant="danger" disabled={mutation.isPending} onClick={() => mutation.mutate({ status: "rejected" })}><X />Отклонить</Button><Button size="sm" disabled={mutation.isPending} onClick={() => mutation.mutate({ status: "approved" })}><Check />Одобрить</Button></div> : null}</header>
+      {editing && !readOnly ? <div className={styles.editor}><textarea value={text} onChange={(event) => setText(event.target.value)} rows={9} aria-label="Редактировать предложенный ответ" /><Button size="sm" onClick={() => mutation.mutate({ text })} disabled={mutation.isPending || !text.trim()}>Сохранить ответ</Button></div> : <p>{reply.text}</p>}
       {mutation.isError ? <small className={styles.error} role="alert">{demoLimitMessage(mutation.error) ?? "Не удалось обновить ответ. Попробуйте ещё раз."}</small> : null}
     </article>
   );

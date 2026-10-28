@@ -1,3 +1,4 @@
+import { demoLimitMessage } from "../../shared/lib/demo-limit";
 import { useQuery } from "@tanstack/react-query";
 import { FilterX, Plus, Search } from "lucide-react";
 import { useDeferredValue, useState } from "react";
@@ -58,7 +59,7 @@ export function FeedbackListPage() {
         </div>
       </section>
       <section className={styles.tablePanel}>
-        {query.isPending ? <FeedbackState kind="loading" /> : query.isError ? <FeedbackState kind="error" message="Не удалось загрузить обращения. Проверьте, что API запущен." onRetry={() => void query.refetch()} /> : visibleItems.length ? <FeedbackTable items={visibleItems} /> : <FeedbackState kind="empty" title={hasFilters ? "Подходящих обращений нет" : "Обращений пока нет"} message={hasFilters ? "Попробуйте сбросить один или несколько фильтров." : "Добавьте первое обращение, чтобы запустить AI-анализ."} />}
+        {query.isPending ? <FeedbackState kind="loading" /> : query.isError ? <FeedbackState kind="error" message={demoLimitMessage(query.error) ?? "Не удалось загрузить обращения. Проверьте, что API запущен."} onRetry={() => void query.refetch()} /> : visibleItems.length ? <FeedbackTable items={visibleItems} /> : <FeedbackState kind="empty" title={hasFilters ? "Подходящих обращений нет" : "Обращений пока нет"} message={hasFilters ? "Попробуйте сбросить один или несколько фильтров." : "Добавьте первое обращение, чтобы запустить AI-анализ."} />}
       </section>
     </>
   );

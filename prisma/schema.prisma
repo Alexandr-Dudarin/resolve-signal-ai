@@ -74,7 +74,12 @@ model FeedbackItem {
   analyses         FeedbackAnalysis[]
   replies          SuggestedReply[]
   replyGenerations ReplyGeneration[]
+  guestOwnerKey     String?            @map("guest_owner_key") @db.VarChar(64)
+  guestExpiresAt    DateTime?          @map("guest_expires_at")
+  guestAiOperations Int               @default(0) @map("guest_ai_operations")
 
+  @@index([guestExpiresAt])
+  @@index([guestOwnerKey])
   @@index([status, createdAt])
   @@index([source, createdAt])
   @@map("feedback_items")
@@ -160,4 +165,14 @@ model AiUsageCounter {
   @@unique([scope, subjectKey, windowStart])
   @@index([windowStart])
   @@map("ai_usage_counters")
+}
+
+// Stores a keyed one-way verifier, never the raw browser cookie.
+model DemoGuestSession {
+  key       String   @id @db.VarChar(64)
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([expiresAt])
+  @@map("demo_guest_sessions")
 }

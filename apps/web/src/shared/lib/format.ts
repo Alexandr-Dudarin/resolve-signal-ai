@@ -17,5 +17,8 @@ export function capitalizeFirst(value: string) {
 }
 
 export function shortId(id: string, externalId?: string | null) {
-  return externalId ?? `FDB-${id.slice(0, 6).toUpperCase()}`;
+  // Our five fixed synthetic UUIDs share their first six characters.
+  // Keep their labels distinct even before legacy demo metadata is refreshed.
+  const demoNumber = /^90000000-0000-4000-8000-00000000000([1-5])$/i.exec(id)?.[1];
+  return externalId ?? (demoNumber ? `FDB-DEMO-00${demoNumber}` : `FDB-${id.slice(0, 6).toUpperCase()}`);
 }

@@ -18,11 +18,15 @@ export class DemoRateLimiter {
 
   constructor(@Inject(DEMO_CONFIG) private readonly config: ApiEnv) {}
 
-  reserve(kind: "login" | "write", ip: string, creation = false, now = Date.now()) {
+  reserve(kind: "login" | "write" | "read" | "guest", ip: string, creation = false, now = Date.now()) {
     for (const [key, bucket] of this.buckets) if (bucket.end <= now) this.buckets.delete(key);
     const rules: [DemoRateLimitError["scope"], string, number, number][] = kind === "login"
       ? [["login_global", "global", this.config.DEMO_LOGIN_GLOBAL, 900000], ["login_ip", ip, this.config.DEMO_LOGIN_PER_IP, 900000]]
-      : [["write_global", "global", this.config.DEMO_WRITE_GLOBAL_MINUTE, 60000], ["write_ip", ip, this.config.DEMO_WRITE_PER_IP_MINUTE, 60000]];
+      : kind === "read"
+        ? [["read_global", "global", this.config.DEMO_READ_GLOBAL_MINUTE, 60000], ["read_ip", ip, this.config.DEMO_READ_PER_IP_MINUTE, 60000]]
+        : kind === "guest"
+          ? [["guest_session_global", "global", this.config.DEMO_GUEST_SESSION_GLOBAL, 900000], ["guest_session_ip", ip, this.config.DEMO_GUEST_SESSION_PER_IP, 900000]]
+          : [["write_global", "global", this.config.DEMO_WRITE_GLOBAL_MINUTE, 60000], ["write_ip", ip, this.config.DEMO_WRITE_PER_IP_MINUTE, 60000]];
     if (creation) rules.push(["create_global", "global", this.config.DEMO_CREATE_GLOBAL_DAY, 86400000]);
     const reservations = rules.map(([scope, subject, limit, window]) => {
       const key = `${scope}:${subject}`;

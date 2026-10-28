@@ -40,13 +40,29 @@ export function FeedbackDetailsPage() {
   });
 
   if (query.isPending) return <section className={styles.statePanel}><FeedbackState kind="loading" /></section>;
-  if (query.isError) return <section className={styles.statePanel}><FeedbackState kind="error" title="Обращение недоступно" message="Возможно, обращения не существует или API недоступен." onRetry={() => void query.refetch()} /></section>;
+  if (query.isError) return <section className={styles.statePanel}><FeedbackState kind="error" title="Обращение недоступно" message={demoLimitMessage(query.error) ?? "Возможно, обращение больше не хранится в демо или API недоступен."} onRetry={() => void query.refetch()} /></section>;
   const feedback = query.data;
+  const readOnly = feedback.permissions?.canModify === false;
+  // A copy gets its own new feedback ID. Only fixed synthetic examples
+  // carry forward the display-only client metadata.
+  const demoCopy = {
+    text: feedback.text,
+    source: feedback.source,
+    ...(feedback.rating ? { rating: feedback.rating } : {}),
+    ...(feedback.permissions?.reason === "shared_example" && feedback.authorName
+      ? { authorName: feedback.authorName } : {}),
+    ...(feedback.permissions?.reason === "shared_example" && feedback.customerRef
+      ? { customerRef: feedback.customerRef } : {}),
+  };
 
   return (
     <>
       <Link to="/feedback" className={styles.back}><ArrowLeft />К списку обращений</Link>
-      <PageHeader eyebrow="Детали обращения" title={shortId(feedback.id, feedback.externalId)} description="Исходный текст клиента, структурированный AI-анализ и подготовка ответа." actions={<div className={styles.statusControl}><span>Статус</span><Select value={feedback.status} onChange={(value) => statusMutation.mutate(value as FeedbackStatus)} disabled={statusMutation.isPending} ariaLabel="Статус обращения" layout="full" dropdownAlign="end" options={statusOptions} /></div>} />
+      <PageHeader eyebrow="Детали обращения" title={shortId(feedback.id, feedback.externalId)} description="Исходный текст клиента, структурированный AI-анализ и подготовка ответа." actions={<div className={styles.statusControl}><span>Статус</span><Select value={feedback.status} onChange={(value) => statusMutation.mutate(value as FeedbackStatus)} disabled={readOnly || statusMutation.isPending} ariaLabel="Статус обращения" layout="full" dropdownAlign="end" options={statusOptions} /></div>} />
+      {readOnly ? <div className={styles.readOnlyNotice} role="note">
+        <p>{feedback.permissions?.reason === "shared_example" ? "Общий демо-пример" : "Обращение другого или завершённого гостевого сеанса"} доступен только для чтения. Чтобы попробовать AI и обработку обращения, создайте свою копию.</p>
+        <Link to="/feedback/new" state={{ demoCopy }}>Попробовать на своей копии</Link>
+      </div> : feedback.permissions?.expiresAt ? <p className={styles.retentionNote}>Ваше тестовое обращение доступно до {formatDate(feedback.permissions.expiresAt)}. Изменения доступны в текущем гостевом сеансе.</p> : null}
       {routeState?.analysisFailed && !feedback.latestAnalysis ? <p className={styles.actionError} role="alert">Обращение сохранено, но автоматический AI-анализ не завершился. {analysisLimit.success ? formatAiUsageLimitMessage(analysisLimit.data) : "Повторите запуск в блоке AI-анализа."}</p> : null}
       {statusMutation.isError ? <p className={styles.actionError} role="alert">{demoLimitMessage(statusMutation.error) ?? "Не удалось обновить статус. Предыдущее значение сохранено."}</p> : null}
       <div className={styles.heroGrid}>
@@ -58,12 +74,13 @@ export function FeedbackDetailsPage() {
             <blockquote>“{feedback.text}”</blockquote>
           </div>
         </section>
-        {feedback.latestAnalysis ? <FeedbackAnalysisPanel analysis={feedback.latestAnalysis} /> : <section className={styles.analysisEmpty}><div><Sparkles aria-hidden="true" /></div><span>AI-анализ</span><h2>Получите структурированный разбор обращения.</h2><p>AI определит тональность, критичность, категорию, краткое содержание и основные проблемы.</p><AnalyzeFeedbackButton feedbackId={feedback.id} /></section>}
+        {feedback.latestAnalysis ? <FeedbackAnalysisPanel analysis={feedback.latestAnalysis} /> : <section className={styles.analysisEmpty}><div><Sparkles aria-hidden="true" /></div><span>AI-анализ</span><h2>Получите структурированный разбор обращения.</h2><p>{readOnly ? "Создайте свою копию обращения, чтобы запустить AI-анализ." : "AI определит тональность, критичность, категорию, краткое содержание и основные проблемы."}</p>{!readOnly ? <AnalyzeFeedbackButton feedbackId={feedback.id} /> : null}</section>}
       </div>
       <SuggestedReplies
         feedbackId={feedback.id}
         currentGeneration={feedback.currentReplyGeneration}
         replies={feedback.suggestedReplies}
+        readOnly={readOnly}
       />
     </>
   );

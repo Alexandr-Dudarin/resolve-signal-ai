@@ -110,6 +110,25 @@ const production = {
 };
 
 describe("production fails closed", () => {
+  it("explicitly permits production guest mode without an access code", () => {
+    const env = getApiEnv({ ...production, DEMO_ACCESS_MODE: "guest", DEMO_ACCESS_CODE: undefined });
+    expect(env.DEMO_ACCESS_ENABLED).toBe(true);
+    expect(env.DEMO_ACCESS_MODE).toBe("guest");
+    expect(env.AI_PROVIDER).toBe("openai");
+    expect(env.AI_LIMIT_GLOBAL_DAY).toBeGreaterThan(0);
+  });
+  it.each([
+    { DEMO_ACCESS_ENABLED: "false" }, { DEMO_SESSION_SECRET: "" },
+    { OPENAI_MAX_OUTPUT_TOKENS: "0" }, { OPENAI_MAX_OUTPUT_TOKENS: "100000" }, { OPENAI_TIMEOUT_MS: "0" },
+    { AI_PROVIDER: "mock" }, { AI_USAGE_LIMITS_ENABLED: "false" },
+    { DEMO_ACCESS_MODE: "anything" }, { DEMO_GUEST_MAX_RECORDS: "0" },
+    { DEMO_GUEST_RETENTION_HOURS: "999999" }, { DEMO_GUEST_AI_OPERATIONS_PER_RECORD: "0" },
+  ])("guest mode cannot bypass production defenses %#", (changes) => {
+    expect(() => getApiEnv({ ...production, DEMO_ACCESS_MODE: "guest", DEMO_ACCESS_CODE: undefined, ...changes })).toThrow();
+  });
+  it("requires enabled controls for guest mode even in development", () => {
+    expect(() => getApiEnv({ ...baseEnv, DEMO_ACCESS_MODE: "guest" })).toThrow("DEMO_ACCESS_ENABLED");
+  });
   it("defaults to gated live OpenAI with bounded sessions", () => {
     const config = getApiEnv(production);
     expect(config.DEMO_ACCESS_ENABLED).toBe(true);

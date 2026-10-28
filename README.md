@@ -5,8 +5,9 @@ AI-анализ, варианты ответа, редактирование и 
 Внутренние API/DB enums остаются английскими, русские названия находятся в presentation dictionaries.
 
 Реализованы Phase 0, Phase 1, настоящий OpenAI provider и AI security controls.
-Текущий pass `public-demo-readiness` добавляет серверный код доступа к общему демо,
-ограниченные сессии, защиту записей и конфигурацию для Vercel / Render / Neon.
+Текущий pass `passwordless-public-demo` добавляет публичный просмотр без регистрации,
+гостевые cookie-сессии в PostgreSQL, владение тестовыми обращениями и ограничение хранения.
+Существующий вход по коду сохранён как отдельный режим.
 **Облачная публикация ещё не выполнена и требует отдельной приёмки.**
 
 ## Возможности и границы
@@ -19,11 +20,12 @@ AI-анализ, варианты ответа, редактирование и 
   `AI_PROVIDER=openai` — Responses API + Structured Outputs/Zod, серверные ключ и модель,
   `store:false`, `maxRetries:0`, без fallback на Mock.
 - PostgreSQL-атомарные AI-квоты, plain-text XSS normalization, недоверенные данные отдельно от instructions.
-- Gated demo: общий workspace, HttpOnly cookie, logout/revocation, CSRF Origin validation,
+- Guest/code demo: общий workspace, HttpOnly cookie, logout/revocation, CSRF Origin validation,
   rate limits, ограничения body, cache clearing и понятные сообщения на русском.
 
 Не реализованы Agent/tool calling, Telegram, Cases/V2, webhooks/V3, billing, full auth/RBAC,
-multi-tenancy, queues и background jobs. Доступ по коду не даёт изоляцию данных между гостями.
+multi-tenancy, queues и background jobs. Guest mode разрешает изменения только своих временных
+записей; чтение общее. Доступ по коду сохраняет прежний совместный workspace.
 
 ## Локальный запуск
 
@@ -49,7 +51,8 @@ Swagger http://localhost:4000/api/docs доступен только в ungated 
 согласованно изменить dev proxy. Критический локальный seed:
 `/feedback/33333333-3333-4333-8333-333333333333`.
 
-Для локальной проверки gate включить DEMO_ACCESS_ENABLED и задать два независимо
+Для локальной проверки passwordless guest mode см. `docs/PASSWORDLESS_PUBLIC_DEMO.md`.
+Для прежнего режима mode=code включить DEMO_ACCESS_ENABLED и задать два независимо
 сгенерированных секрета согласно `.env.example`. Для live локально добавить серверные
 OPENAI_API_KEY и OPENAI_MODEL, выбрать AI_PROVIDER=openai; это отдельное платное действие.
 Ни тесты, ни demo initializer не обращаются в OpenAI.
@@ -84,6 +87,8 @@ Application services зависят от `LLMProvider` / `FeedbackRepository`; c
 
 ## Документы
 
+- [Passwordless guest mode: лимиты, migration, локальный QA](docs/PASSWORDLESS_PUBLIC_DEMO.md)
+- [Результаты проверок guest pass](docs/PASSWORDLESS_VALIDATION.md)
 - [Актуальный checkpoint](docs/CURRENT_STATUS.md)
 - [Публикация и эксплуатация Vercel / Render / Neon](docs/PUBLIC_DEMO_DEPLOYMENT.md)
 - [Локальная приёмка и ограничения проверок](docs/PUBLIC_DEMO_VALIDATION.md)

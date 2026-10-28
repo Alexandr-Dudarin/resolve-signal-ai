@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import type { FeedbackDetails } from "@resolve-signal/contracts";
 import { api } from "../../shared/api/api-client";
@@ -37,4 +37,56 @@ describe("feedback plain-text rendering", () => {
     expect(screen.getAllByText(payload)).toHaveLength(2);
     expect(container.querySelectorAll("script, img")).toHaveLength(0);
   });
+});
+
+it("offers a copy of read-only guest data and exposes no mutation controls", async () => {
+  vi.mocked(api.feedback).mockResolvedValue({
+    ...feedback, permissions: { canModify: false, reason: "shared_example", expiresAt: null },
+    suggestedReplies: [{
+      id: "22222222-2222-4222-8222-222222222222", feedbackId: feedback.id,
+      analysisId: "33333333-3333-4333-8333-333333333333", generationId: null, tone: "empathetic",
+      originalText: payload, text: payload, status: "draft", editedAt: null,
+      createdAt: feedback.createdAt, updatedAt: feedback.updatedAt,
+    }],
+  });
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const { container } = render(<QueryClientProvider client={client}><MemoryRouter initialEntries={[`/feedback/${feedback.id}`]}>
+    <Routes><Route path="/feedback/:id" element={<FeedbackDetailsPage />} /></Routes>
+  </MemoryRouter></QueryClientProvider>);
+  expect(await screen.findByRole("link", { name: "Попробовать на своей копии" })).toHaveAttribute("href", "/feedback/new");
+  expect(screen.getByRole("combobox", { name: "Статус обращения" })).toBeDisabled();
+  for (const name of [/Запустить AI-анализ/, /Сгенерировать/, /Одобрить/, /Отклонить/, /Изменить/]) {
+    expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
+  }
+  expect(container.querySelectorAll("script, img")).toHaveLength(0);
+  expect(screen.getByText(payload)).toBeInTheDocument();
+  client.clear();
+});
+
+
+it("prefills synthetic client name and reference when copying a protected example", async () => {
+  vi.mocked(api.feedback).mockResolvedValue({
+    ...feedback,
+    id: "90000000-0000-4000-8000-000000000001",
+    authorName: "Стефания",
+    customerRef: "CUS-DEMO-001",
+    externalId: "FDB-DEMO-001",
+    permissions: { canModify: false, reason: "shared_example", expiresAt: null },
+  });
+  function CopyDestination() {
+    const { state } = useLocation();
+    return <output data-testid="copied-fields">{JSON.stringify(state)}</output>;
+  }
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(<QueryClientProvider client={client}><MemoryRouter initialEntries={[`/feedback/90000000-0000-4000-8000-000000000001`]}>
+    <Routes>
+      <Route path="/feedback/:id" element={<FeedbackDetailsPage />} />
+      <Route path="/feedback/new" element={<CopyDestination />} />
+    </Routes>
+  </MemoryRouter></QueryClientProvider>);
+  fireEvent.click(await screen.findByRole("link", { name: "Попробовать на своей копии" }));
+  const { demoCopy } = JSON.parse(screen.getByTestId("copied-fields").textContent!);
+  expect(demoCopy).toEqual({ source: "manual", text: payload, authorName: "Стефания", customerRef: "CUS-DEMO-001" });
+  expect(demoCopy).not.toHaveProperty("externalId");
+  client.clear();
 });

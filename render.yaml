@@ -17,6 +17,10 @@ services:
         value: openai
       - key: OPENAI_MODEL
         value: gpt-5.6-luna
+      - key: OPENAI_MAX_OUTPUT_TOKENS
+        value: "2000"
+      - key: OPENAI_TIMEOUT_MS
+        value: "30000"
       - key: AI_USAGE_LIMITS_ENABLED
         value: "true"
       - key: AI_LIMIT_PER_IP_MINUTE
@@ -27,6 +31,8 @@ services:
         value: "30"
       - key: TRUST_PROXY_HOPS
         value: "0"
+      - key: DEMO_ACCESS_MODE
+        value: guest
       - key: DEMO_ACCESS_ENABLED
         value: "true"
       - key: DEMO_SESSION_TTL_SECONDS
@@ -41,13 +47,29 @@ services:
         value: "60"
       - key: DEMO_CREATE_GLOBAL_DAY
         value: "50"
+      - key: DEMO_READ_PER_IP_MINUTE
+        value: "120"
+      - key: DEMO_READ_GLOBAL_MINUTE
+        value: "600"
+      - key: DEMO_GUEST_SESSION_PER_IP
+        value: "20"
+      - key: DEMO_GUEST_SESSION_GLOBAL
+        value: "100"
+      - key: DEMO_GUEST_MAX_SESSIONS
+        value: "1000"
+      - key: DEMO_GUEST_MAX_RECORDS
+        value: "500"
+      - key: DEMO_GUEST_RECORDS_PER_SESSION
+        value: "5"
+      - key: DEMO_GUEST_RETENTION_HOURS
+        value: "24"
+      - key: DEMO_GUEST_AI_OPERATIONS_PER_RECORD
+        value: "20"
       - key: CORS_ORIGIN
         sync: false
       - key: DATABASE_URL
         sync: false
       - key: OPENAI_API_KEY
-        sync: false
-      - key: DEMO_ACCESS_CODE
         sync: false
       - key: DEMO_SESSION_SECRET
         sync: false

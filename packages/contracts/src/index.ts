@@ -123,6 +123,11 @@ export const FeedbackListItemSchema = z.object({
 export const FeedbackDetailsSchema = FeedbackListItemSchema.extend({
   currentReplyGeneration: ReplyGenerationSchema.nullable(),
   suggestedReplies: z.array(SuggestedReplySchema),
+  permissions: z.object({
+    canModify: z.boolean(),
+    reason: z.enum(["shared_example", "other_guest", "expired"]).nullable(),
+    expiresAt: z.string().datetime().nullable(),
+  }).optional(),
 });
 
 export const FeedbackListQuerySchema = z.object({
@@ -205,8 +210,9 @@ export type AiRuntimeStatus = z.infer<typeof AiRuntimeStatusSchema>;
 export type AiUsageLimitScope = z.infer<typeof AiUsageLimitScopeSchema>;
 export type AiUsageLimitError = z.infer<typeof AiUsageLimitErrorSchema>;
 
-// Shared demo access adds no user/tenant identity to the business model.
+// No session identifier or ownership verifier is exposed through the API.
 export const DemoSessionSchema = z.object({
+  mode: z.enum(["code", "guest"]).optional(),
   enabled: z.boolean(),
   authenticated: z.boolean(),
   expiresAt: z.string().datetime().nullable(),
@@ -214,8 +220,13 @@ export const DemoSessionSchema = z.object({
 export const DemoLoginSchema = z.object({ code: z.string().min(1).max(128) });
 export const DemoRateLimitErrorSchema = z.object({
   code: z.literal("DEMO_RATE_LIMIT_EXCEEDED"),
-  scope: z.enum(["login_ip", "login_global", "write_ip", "write_global", "create_global", "sessions"]),
+  scope: z.enum(["login_ip", "login_global", "write_ip", "write_global", "create_global", "sessions",
+    "read_ip", "read_global", "guest_session_ip", "guest_session_global", "guest_records",
+    "guest_owner_records", "guest_ai_record"]),
   retryAfterSeconds: z.number().int().nonnegative(),
 });
 export type DemoSession = z.infer<typeof DemoSessionSchema>;
 export type DemoRateLimitError = z.infer<typeof DemoRateLimitErrorSchema>;
+export const DemoReadOnlyErrorSchema = z.object({
+  code: z.literal("DEMO_READ_ONLY"),
+});
