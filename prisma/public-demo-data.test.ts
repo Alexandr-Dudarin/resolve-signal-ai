@@ -18,6 +18,13 @@ describe("explicit non-destructive demo data", () => {
     expect(publicDemoFeedback.map((x) => x.externalId)).toEqual(["FDB-DEMO-001", "FDB-DEMO-002", "FDB-DEMO-003", "FDB-DEMO-004", "FDB-DEMO-005"]);
     expect(publicDemoFeedback.map((x) => x.customerRef)).toEqual(["CUS-DEMO-001", "CUS-DEMO-002", "CUS-DEMO-003", "CUS-DEMO-004", "CUS-DEMO-005"]);
   });
+  it("uses a separate confirmation for protected showcase initialization", () => {
+    expect(() => requirePublicDemoDatabase(base, "showcase")).toThrow();
+    const config = { ...base, PUBLIC_DEMO_CONFIRM: "showcase-public-demo" };
+    expect(requirePublicDemoDatabase(config, "showcase")).toBe(base.DIRECT_URL);
+    expect(() => requirePublicDemoDatabase(config, "init")).toThrow();
+    expect(() => requirePublicDemoDatabase(config, "labels")).toThrow();
+  });
   it("requires exact database and action confirmation", () => {
     expect(requirePublicDemoDatabase(base, "init")).toBe(base.DIRECT_URL);
     expect(() => requirePublicDemoDatabase(base, "migrate")).toThrow();

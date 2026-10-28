@@ -25,7 +25,8 @@
     "test:ops": "vitest run --config vitest.ops.config.ts",
     "db:demo:migrate": "node --env-file-if-exists=.env --import tsx prisma/public-demo-command.ts migrate",
     "db:demo:init": "node --env-file-if-exists=.env --import tsx prisma/public-demo-command.ts init",
-    "db:demo:labels": "node --env-file-if-exists=.env --import tsx prisma/public-demo-labels.ts"
+    "db:demo:labels": "node --env-file-if-exists=.env --import tsx prisma/public-demo-labels.ts",
+    "db:demo:showcase": "node --env-file-if-exists=.env --import tsx prisma/public-demo-showcase.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
